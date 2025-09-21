@@ -838,6 +838,7 @@ public:
         {ZYDIS_MNEMONIC_VSHUFPD, &CPU::emulate_vshufpd },
         {ZYDIS_MNEMONIC_UNPCKHPS, &CPU::emulate_unpckhps },
         {ZYDIS_MNEMONIC_VUNPCKHPS, &CPU::emulate_vunpckhps },
+        {ZYDIS_MNEMONIC_VUNPCKHPD, &CPU::emulate_vunpckhpd },
 
     };
   }
@@ -15286,6 +15287,36 @@ private:
       }
 
       LOG(L"[+] VUNPCKHPS executed (256-bit)");
+  }
+  void emulate_vunpckhpd(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src1 = instr->operands[1];
+      const auto& src2 = instr->operands[2];
+
+      if (dst.size != 256) {
+          LOG(L"[!] Unsupported operand size for VUNPCKHPD: " << dst.size);
+          return;
+      }
+
+      __m256d a_val, b_val;
+
+      if (!read_operand_value<__m256d>(src1, 256, a_val)) {
+          LOG(L"[!] Failed to read src1 for VUNPCKHPD");
+          return;
+      }
+      if (!read_operand_value<__m256d>(src2, 256, b_val)) {
+          LOG(L"[!] Failed to read src2 for VUNPCKHPD");
+          return;
+      }
+
+      __m256d result = _mm256_unpackhi_pd(a_val, b_val);
+
+      if (!write_operand_value<__m256d>(dst, 256, result)) {
+          LOG(L"[!] Failed to write result for VUNPCKHPD");
+          return;
+      }
+
+      LOG(L"[+] VUNPCKHPD executed (256-bit)");
   }
 
 
