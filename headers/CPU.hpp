@@ -823,17 +823,19 @@ public:
         {ZYDIS_MNEMONIC_PEXTRQ, &CPU::emulate_pextrq },
         {ZYDIS_MNEMONIC_VPEXTRQ, &CPU::emulate_vpextrq },
         {ZYDIS_MNEMONIC_VPBROADCASTB, &CPU::emulate_vpbroadcastb },
-        { ZYDIS_MNEMONIC_VPBROADCASTW, &CPU::emulate_vpbroadcastw },
-        { ZYDIS_MNEMONIC_VPBROADCASTD, &CPU::emulate_vpbroadcastd },
-        { ZYDIS_MNEMONIC_VPBROADCASTQ, &CPU::emulate_vpbroadcastq },
-        { ZYDIS_MNEMONIC_PSRLD, &CPU::emulate_psrld },
-        { ZYDIS_MNEMONIC_PSRLQ, &CPU::emulate_psrlq },
-        { ZYDIS_MNEMONIC_VPSRLW, &CPU::emulate_vpsrlw },
-        { ZYDIS_MNEMONIC_VPSRLD, &CPU::emulate_vpsrld },
-        { ZYDIS_MNEMONIC_VPSRLQ, &CPU::emulate_vpsrlq },
-        { ZYDIS_MNEMONIC_BLENDVPD, &CPU::emulate_blendvpd },
-        { ZYDIS_MNEMONIC_VBLENDVPD, &CPU::emulate_vblendvpd },
-        { ZYDIS_MNEMONIC_BLENDPS, &CPU::emulate_blendps },
+        {ZYDIS_MNEMONIC_VPBROADCASTW, &CPU::emulate_vpbroadcastw },
+        {ZYDIS_MNEMONIC_VPBROADCASTD, &CPU::emulate_vpbroadcastd },
+        {ZYDIS_MNEMONIC_VPBROADCASTQ, &CPU::emulate_vpbroadcastq },
+        {ZYDIS_MNEMONIC_PSRLD, &CPU::emulate_psrld },
+        {ZYDIS_MNEMONIC_PSRLQ, &CPU::emulate_psrlq },
+        {ZYDIS_MNEMONIC_VPSRLW, &CPU::emulate_vpsrlw },
+        {ZYDIS_MNEMONIC_VPSRLD, &CPU::emulate_vpsrld },
+        {ZYDIS_MNEMONIC_VPSRLQ, &CPU::emulate_vpsrlq },
+        {ZYDIS_MNEMONIC_BLENDVPD, &CPU::emulate_blendvpd },
+        {ZYDIS_MNEMONIC_VBLENDVPD, &CPU::emulate_vblendvpd },
+        {ZYDIS_MNEMONIC_BLENDPS, &CPU::emulate_blendps },
+        {ZYDIS_MNEMONIC_SHUFPD, &CPU::emulate_shufpd },
+        {ZYDIS_MNEMONIC_VSHUFPD, &CPU::emulate_vshufpd },
 
     };
   }
@@ -4358,13 +4360,10 @@ private:
     _mm_store_ps(f1, src1_val);
     _mm_store_ps(f2, src2_val);
 
-    // Low 2 bits -> index for out[0] from f1
+
     out[0] = f1[(shuffle_imm >> 0) & 0x3];
-    // Bits 2-3 -> index for out[1] from f1
     out[1] = f1[(shuffle_imm >> 2) & 0x3];
-    // Bits 4-5 -> index for out[2] from f2
     out[2] = f2[(shuffle_imm >> 4) & 0x3];
-    // Bits 6-7 -> index for out[3] from f2
     out[3] = f2[(shuffle_imm >> 6) & 0x3];
 
     __m128 result = _mm_load_ps(out);
@@ -15132,6 +15131,100 @@ private:
       }
 
       LOG(L"[+] BLENDPS executed (128-bit, mask=" << mask << ")");
+  }
+  void emulate_shufpd(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      const auto& imm = instr->operands[2];
+
+      if (dst.size != 128) {
+          LOG(L"[!] Unsupported operand size for SHUFPD: " << dst.size);
+          return;
+      }
+
+      __m128d src1_val, src2_val;
+      if (!read_operand_value<__m128d>(dst, 128, src1_val)) {
+          LOG(L"[!] Failed to read first source operand (dst) for SHUFPD");
+          return;
+      }
+      if (!read_operand_value<__m128d>(src, 128, src2_val)) {
+          LOG(L"[!] Failed to read second source operand (src) for SHUFPD");
+          return;
+      }
+
+      uint8_t shuffle_imm = static_cast<uint8_t>(imm.imm.value.u & 0xFF);
+
+      alignas(16) double f1[2], f2[2], out[2];
+      _mm_store_pd(f1, src1_val);
+      _mm_store_pd(f2, src2_val);
+
+
+      out[0] = f1[(shuffle_imm >> 0) & 0x1];
+      out[1] = f2[(shuffle_imm >> 1) & 0x1];
+
+      __m128d result = _mm_load_pd(out);
+
+      if (!write_operand_value<__m128d>(dst, 128, result)) {
+          LOG(L"[!] Failed to write result for SHUFPD");
+          return;
+      }
+
+      LOG(L"[+] SHUFPD executed");
+  }
+  void emulate_vshufpd(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src1 = instr->operands[1];
+      const auto& src2 = instr->operands[2];
+      const auto& imm = instr->operands[3];
+
+      uint8_t imm8 = static_cast<uint8_t>(imm.imm.value.u & 0xFF);
+
+      if (dst.size == 128) {
+          __m128d a_val, b_val;
+          if (!read_operand_value<__m128d>(src1, 128, a_val) ||
+              !read_operand_value<__m128d>(src2, 128, b_val)) {
+              LOG(L"[!] Failed to read operands for VSHUFPD(128)");
+              return;
+          }
+
+          alignas(16) double fa[2], fb[2], out[2];
+          _mm_store_pd(fa, a_val);
+          _mm_store_pd(fb, b_val);
+
+          out[0] = fa[(imm8 >> 0) & 1];
+          out[1] = fb[(imm8 >> 1) & 1];
+
+          __m128d result = _mm_load_pd(out);
+          write_operand_value<__m128d>(dst, 128, result);
+          LOG(L"[+] VSHUFPD executed (128-bit)");
+      }
+      else if (dst.size == 256) {
+          __m256d a_val, b_val;
+          if (!read_operand_value<__m256d>(src1, 256, a_val) ||
+              !read_operand_value<__m256d>(src2, 256, b_val)) {
+              LOG(L"[!] Failed to read operands for VSHUFPD(256)");
+              return;
+          }
+
+          alignas(32) double fa[4], fb[4], out[4];
+          _mm256_store_pd(fa, a_val);
+          _mm256_store_pd(fb, b_val);
+
+ 
+          out[0] = fa[(imm8 >> 0) & 1];
+          out[1] = fb[(imm8 >> 1) & 1];
+
+
+          out[2] = fa[2 + ((imm8 >> 2) & 1)];
+          out[3] = fb[2 + ((imm8 >> 3) & 1)];
+
+          __m256d result = _mm256_load_pd(out);
+          write_operand_value<__m256d>(dst, 256, result);
+          LOG(L"[+] VSHUFPD executed (256-bit)");
+      }
+      else {
+          LOG(L"[!] Unsupported operand size for VSHUFPD: " << dst.size);
+      }
   }
 
 
