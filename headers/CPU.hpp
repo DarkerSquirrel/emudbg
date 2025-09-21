@@ -840,6 +840,7 @@ public:
         {ZYDIS_MNEMONIC_VUNPCKHPS, &CPU::emulate_vunpckhps },
         {ZYDIS_MNEMONIC_VUNPCKHPD, &CPU::emulate_vunpckhpd },
         {ZYDIS_MNEMONIC_VUNPCKLPS, &CPU::emulate_vunpcklps },
+        {ZYDIS_MNEMONIC_VFMADD213PD, &CPU::emulate_vfmadd213pd },
 
     };
   }
@@ -15363,6 +15364,54 @@ private:
       }
 
       LOG(L"[+] VUNPCKLPS executed (256-bit)");
+  }
+  void emulate_vfmadd213pd(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src1 = instr->operands[1];
+      const auto& src2 = instr->operands[2];
+      auto width = dst.size;
+
+      if (width != 128 && width != 256) {
+          LOG(L"[!] Unsupported width in vfmadd213pd: " << (int)width);
+          return;
+      }
+
+      if (width == 128) {
+          __m128d a, b, c;
+          if (!read_operand_value<__m128d>(dst, width, a) ||
+              !read_operand_value<__m128d>(src1, width, b) ||
+              !read_operand_value<__m128d>(src2, width, c)) {
+              LOG(L"[!] Failed to read operands in vfmadd213pd (128-bit)");
+              return;
+          }
+
+
+          __m128d result = _mm_fmadd_pd(a, b, c);
+
+          if (!write_operand_value<__m128d>(dst, width, result)) {
+              LOG(L"[!] Failed to write result in vfmadd213pd (128-bit)");
+              return;
+          }
+      }
+      else if (width == 256) {
+          __m256d a, b, c;
+          if (!read_operand_value<__m256d>(dst, width, a) ||
+              !read_operand_value<__m256d>(src1, width, b) ||
+              !read_operand_value<__m256d>(src2, width, c)) {
+              LOG(L"[!] Failed to read operands in vfmadd213pd (256-bit)");
+              return;
+          }
+
+
+          __m256d result = _mm256_fmadd_pd(a, b, c);
+
+          if (!write_operand_value<__m256d>(dst, width, result)) {
+              LOG(L"[!] Failed to write result in vfmadd213pd (256-bit)");
+              return;
+          }
+      }
+
+      LOG(L"[+] VFMADD213PD executed (" << width << L"-bit)");
   }
 
 
