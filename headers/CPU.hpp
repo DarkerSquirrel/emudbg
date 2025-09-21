@@ -839,6 +839,7 @@ public:
         {ZYDIS_MNEMONIC_UNPCKHPS, &CPU::emulate_unpckhps },
         {ZYDIS_MNEMONIC_VUNPCKHPS, &CPU::emulate_vunpckhps },
         {ZYDIS_MNEMONIC_VUNPCKHPD, &CPU::emulate_vunpckhpd },
+        {ZYDIS_MNEMONIC_VUNPCKLPS, &CPU::emulate_vunpcklps },
 
     };
   }
@@ -15317,6 +15318,51 @@ private:
       }
 
       LOG(L"[+] VUNPCKHPD executed (256-bit)");
+  }
+  void emulate_vunpcklps(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src1 = instr->operands[1];
+      const auto& src2 = instr->operands[2];
+
+      if (dst.size != 256) {
+          LOG(L"[!] Unsupported operand size for VUNPCKLPS: " << dst.size);
+          return;
+      }
+
+      __m256 a_val, b_val;
+
+      if (!read_operand_value<__m256>(src1, 256, a_val)) {
+          LOG(L"[!] Failed to read src1 for VUNPCKLPS");
+          return;
+      }
+      if (!read_operand_value<__m256>(src2, 256, b_val)) {
+          LOG(L"[!] Failed to read src2 for VUNPCKLPS");
+          return;
+      }
+
+
+      float* a = reinterpret_cast<float*>(&a_val);
+      float* b = reinterpret_cast<float*>(&b_val);
+      __m256 result_val;
+      float* r = reinterpret_cast<float*>(&result_val);
+
+      // VUNPCKLPS: unpack low packed single-precision floats
+      // a[0], b[0], a[1], b[1], a[4], b[4], a[5], b[5]
+      r[0] = a[0];
+      r[1] = b[0];
+      r[2] = a[1];
+      r[3] = b[1];
+      r[4] = a[4];
+      r[5] = b[4];
+      r[6] = a[5];
+      r[7] = b[5];
+
+      if (!write_operand_value<__m256>(dst, 256, result_val)) {
+          LOG(L"[!] Failed to write result for VUNPCKLPS");
+          return;
+      }
+
+      LOG(L"[+] VUNPCKLPS executed (256-bit)");
   }
 
 
