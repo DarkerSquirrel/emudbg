@@ -836,6 +836,8 @@ public:
         {ZYDIS_MNEMONIC_BLENDPS, &CPU::emulate_blendps },
         {ZYDIS_MNEMONIC_SHUFPD, &CPU::emulate_shufpd },
         {ZYDIS_MNEMONIC_VSHUFPD, &CPU::emulate_vshufpd },
+        {ZYDIS_MNEMONIC_UNPCKHPS, &CPU::emulate_unpckhps },
+        {ZYDIS_MNEMONIC_VUNPCKHPS, &CPU::emulate_vunpckhps },
 
     };
   }
@@ -15225,6 +15227,65 @@ private:
       else {
           LOG(L"[!] Unsupported operand size for VSHUFPD: " << dst.size);
       }
+  }
+  void emulate_unpckhps(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+
+      if (dst.size != 128) {
+          LOG(L"[!] Unsupported operand size for UNPCKHPS: " << dst.size);
+          return;
+      }
+
+      __m128 a_val, b_val;
+
+      if (!read_operand_value<__m128>(dst, 128, a_val)) {
+          LOG(L"[!] Failed to read dst for UNPCKHPS");
+          return;
+      }
+      if (!read_operand_value<__m128>(src, 128, b_val)) {
+          LOG(L"[!] Failed to read src for UNPCKHPS");
+          return;
+      }
+
+      __m128 result = _mm_unpackhi_ps(a_val, b_val);
+
+      if (!write_operand_value<__m128>(dst, 128, result)) {
+          LOG(L"[!] Failed to write result for UNPCKHPS");
+          return;
+      }
+
+      LOG(L"[+] UNPCKHPS executed (128-bit)");
+  }
+  void emulate_vunpckhps(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src1 = instr->operands[1];
+      const auto& src2 = instr->operands[2];
+
+      if (dst.size != 256) {
+          LOG(L"[!] Unsupported operand size for VUNPCKHPS: " << dst.size);
+          return;
+      }
+
+      __m256 a_val, b_val;
+
+      if (!read_operand_value<__m256>(src1, 256, a_val)) {
+          LOG(L"[!] Failed to read src1 for VUNPCKHPS");
+          return;
+      }
+      if (!read_operand_value<__m256>(src2, 256, b_val)) {
+          LOG(L"[!] Failed to read src2 for VUNPCKHPS");
+          return;
+      }
+
+      __m256 result = _mm256_unpackhi_ps(a_val, b_val);
+
+      if (!write_operand_value<__m256>(dst, 256, result)) {
+          LOG(L"[!] Failed to write result for VUNPCKHPS");
+          return;
+      }
+
+      LOG(L"[+] VUNPCKHPS executed (256-bit)");
   }
 
 
