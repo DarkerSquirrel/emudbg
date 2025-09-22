@@ -842,6 +842,7 @@ public:
         {ZYDIS_MNEMONIC_VUNPCKLPS, &CPU::emulate_vunpcklps },
         {ZYDIS_MNEMONIC_VFMADD213PD, &CPU::emulate_vfmadd213pd },
         {ZYDIS_MNEMONIC_ROUNDSD, &CPU::emulate_roundsd },
+        {ZYDIS_MNEMONIC_VRSQRTPS, &CPU::emulate_vrsqrtps },
 
     };
   }
@@ -10688,7 +10689,7 @@ private:
   void emulate_roundss(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
     const auto &src = instr->operands[1];
-    const auto &imm = instr->operands[2]; // immediate rounding mode
+    const auto &imm = instr->operands[2]; 
 
     __m128 dst_val, src_val;
     if (!read_operand_value(dst, 128, dst_val) ||
@@ -10697,7 +10698,7 @@ private:
       return;
     }
 
-    uint64_t rounding_mode = imm.imm.value.u; // bits 1:0 define mode
+    uint64_t rounding_mode = imm.imm.value.u; 
 
     __m128 result;
     switch (rounding_mode & 0x3) {
@@ -15468,6 +15469,51 @@ private:
       }
 
       LOG(L"[+] ROUNDSD executed (128-bit, imm=" << imm.imm.value.u << L")");
+  }
+  void emulate_vrsqrtps(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+
+      if (dst.size != 128 && dst.size != 256) {
+          LOG(L"[!] Unsupported operand size for VRSQRTPS: " << dst.size);
+          return;
+      }
+
+      if (dst.size == 128) {
+
+          __m128 src_val;
+          if (!read_operand_value<__m128>(src, 128, src_val)) {
+              LOG(L"[!] Failed to read source operand for RSQRTPS (128-bit)");
+              return;
+          }
+
+
+          __m128 approx = _mm_rsqrt_ps(src_val);
+
+          if (!write_operand_value<__m128>(dst, 128, approx)) {
+              LOG(L"[!] Failed to write result for RSQRTPS (128-bit)");
+              return;
+          }
+
+          LOG(L"[+] RSQRTPS executed (128-bit, approx like hardware)");
+      }
+      else {
+
+          __m256 src_val;
+          if (!read_operand_value<__m256>(src, 256, src_val)) {
+              LOG(L"[!] Failed to read source operand for VRSQRTPS (256-bit)");
+              return;
+          }
+
+          __m256 approx = _mm256_rsqrt_ps(src_val);
+
+          if (!write_operand_value<__m256>(dst, 256, approx)) {
+              LOG(L"[!] Failed to write result for VRSQRTPS (256-bit)");
+              return;
+          }
+
+          LOG(L"[+] VRSQRTPS executed (256-bit, approx like hardware)");
+      }
   }
 
 
