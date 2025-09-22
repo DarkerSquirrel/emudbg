@@ -841,6 +841,7 @@ public:
         {ZYDIS_MNEMONIC_VUNPCKHPD, &CPU::emulate_vunpckhpd },
         {ZYDIS_MNEMONIC_VUNPCKLPS, &CPU::emulate_vunpcklps },
         {ZYDIS_MNEMONIC_VFMADD213PD, &CPU::emulate_vfmadd213pd },
+        {ZYDIS_MNEMONIC_ROUNDSD, &CPU::emulate_roundsd },
 
     };
   }
@@ -15417,6 +15418,58 @@ private:
 
       LOG(L"[+] VFMADD213PD executed (" << width << L"-bit)");
   }
+  void emulate_roundsd(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src1 = instr->operands[1];
+      const auto& imm = instr->operands[2]; 
+
+      if (ZydisRegisterGetWidth(ZYDIS_MACHINE_MODE_LONG_64,dst.reg.value)  != 128) {
+          LOG(L"[!] Unsupported operand size for ROUNDSD: " << dst.size);
+          return;
+      }
+
+      __m128d dst_val, src_val;
+      if (!read_operand_value<__m128d>(dst, 128, dst_val)) {
+          LOG(L"[!] Failed to read dst for ROUNDSD");
+          return;
+      }
+      if (!read_operand_value<__m128d>(src1, src1.size, src_val)) {
+          LOG(L"[!] Failed to read src1 for ROUNDSD");
+          return;
+      }
+
+      int round_mode = imm.imm.value.u & 0xF;  
+      double src_double = _mm_cvtsd_f64(src_val);
+      double rounded = 0.0;
+
+      switch (round_mode & 0x3) {  
+      case _MM_FROUND_TO_NEAREST_INT:  
+          rounded = nearbyint(src_double);
+          break;
+      case _MM_FROUND_TO_NEG_INF:     
+          rounded = floor(src_double);
+          break;
+      case _MM_FROUND_TO_POS_INF: 
+          rounded = ceil(src_double);
+          break;
+      case _MM_FROUND_TO_ZERO:      
+          rounded = trunc(src_double);
+          break;
+      default:
+          LOG(L"[!] Unsupported rounding mode in ROUNDSD: " << round_mode);
+          return;
+      }
+
+      __m128d result = _mm_move_sd(dst_val, _mm_set_sd(rounded));
+
+      if (!write_operand_value<__m128d>(dst, 128, result)) {
+          LOG(L"[!] Failed to write result for ROUNDSD");
+          return;
+      }
+
+      LOG(L"[+] ROUNDSD executed (128-bit, imm=" << imm.imm.value.u << L")");
+  }
+
 
 
 
