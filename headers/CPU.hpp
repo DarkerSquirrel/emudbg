@@ -843,6 +843,8 @@ public:
         {ZYDIS_MNEMONIC_VFMADD213PD, &CPU::emulate_vfmadd213pd },
         {ZYDIS_MNEMONIC_ROUNDSD, &CPU::emulate_roundsd },
         {ZYDIS_MNEMONIC_VRSQRTPS, &CPU::emulate_vrsqrtps },
+        {ZYDIS_MNEMONIC_SQRTPS, &CPU::emulate_sqrtps },
+        {ZYDIS_MNEMONIC_VSQRTPS, &CPU::emulate_vsqrtps },
 
     };
   }
@@ -15513,6 +15515,74 @@ private:
           }
 
           LOG(L"[+] VRSQRTPS executed (256-bit, approx like hardware)");
+      }
+  }
+  void emulate_sqrtps(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+
+      if (dst.size != 128) {
+          LOG(L"[!] Unsupported operand size for SQRTPS: " << dst.size);
+          return;
+      }
+
+      __m128 src_val;
+      if (!read_operand_value<__m128>(src, 128, src_val)) {
+          LOG(L"[!] Failed to read source operand for SQRTPS");
+          return;
+      }
+
+
+      __m128 result = _mm_sqrt_ps(src_val);
+
+      if (!write_operand_value<__m128>(dst, 128, result)) {
+          LOG(L"[!] Failed to write result for SQRTPS");
+          return;
+      }
+
+      LOG(L"[+] SQRTPS executed (128-bit)");
+  }
+
+  void emulate_vsqrtps(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+
+      if (dst.size != 128 && dst.size != 256) {
+          LOG(L"[!] Unsupported operand size for VSQRTPS: " << dst.size);
+          return;
+      }
+
+      if (dst.size == 128) {
+          __m128 src_val;
+          if (!read_operand_value<__m128>(src, 128, src_val)) {
+              LOG(L"[!] Failed to read source operand for SQRTPS (128-bit)");
+              return;
+          }
+
+          __m128 result = _mm_sqrt_ps(src_val);
+
+          if (!write_operand_value<__m128>(dst, 128, result)) {
+              LOG(L"[!] Failed to write result for SQRTPS (128-bit)");
+              return;
+          }
+
+          LOG(L"[+] SQRTPS executed (128-bit)");
+      }
+      else {
+          __m256 src_val;
+          if (!read_operand_value<__m256>(src, 256, src_val)) {
+              LOG(L"[!] Failed to read source operand for VSQRTPS (256-bit)");
+              return;
+          }
+
+          __m256 result = _mm256_sqrt_ps(src_val);
+
+          if (!write_operand_value<__m256>(dst, 256, result)) {
+              LOG(L"[!] Failed to write result for VSQRTPS (256-bit)");
+              return;
+          }
+
+          LOG(L"[+] VSQRTPS executed (256-bit)");
       }
   }
 
