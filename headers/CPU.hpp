@@ -15388,6 +15388,10 @@ private:
 
           __m128d result = _mm_fmadd_pd(a, b, c);
 
+          ZydisRegister dstYMM =
+              (ZydisRegister)(ZYDIS_REGISTER_YMM0 +
+                  (dst.reg.value - ZYDIS_REGISTER_XMM0));
+          set_register_value(dstYMM, YMM{});
           if (!write_operand_value<__m128d>(dst, width, result)) {
               LOG(L"[!] Failed to write result in vfmadd213pd (128-bit)");
               return;
