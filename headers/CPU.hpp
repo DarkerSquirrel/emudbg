@@ -36,13 +36,14 @@
 // stealth
 #define Stealth_Mode_ENABLED 1
 // emulate everything in dll user mode
-#define FUll_user_MODE 1
+#define FUll_user_MODE 0
 // Multithread_the_MultiThread
 #define Multithread_the_MultiThread 0
 // Enable automatic patching of hardware checks
 #define AUTO_PATCH_HW 0
 // Enable saving RVA addresses + descriptions to file
 #define Save_Rva 0
+#define experment 0
 //------------------------------------------
 
 std::pair<uint64_t, size_t> noexec_range;

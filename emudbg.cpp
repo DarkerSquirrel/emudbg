@@ -220,9 +220,15 @@ int wmain(int argc, wchar_t *argv[]) {
           }
 
 #endif
-
-
-
+#if experment
+          if ((lowerLoaded.find(L"kernel32.dll") != std::wstring::npos) && bpType == BreakpointType::ExecGuard) {
+              kernel32_address = reinterpret_cast<uint64_t>(ld.lpBaseOfDll);
+              Patch_VirtualAlloc();
+              Patch_VirtualProtect();
+              LOG(L"[+] kernel32.dll loaded at 0x" << std::hex
+                  << kernel32_address);
+          }
+#endif
 #if Stealth_Mode_ENABLED
 
           if (lowerLoaded.find(L"kernelbase.dll") != std::wstring::npos) {

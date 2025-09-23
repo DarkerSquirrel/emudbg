@@ -39,6 +39,7 @@ std::wstring GetSystemModuleNameFromAddress(uint64_t addr) {
 PROCESS_INFORMATION pi;
 IMAGE_OPTIONAL_HEADER64 optionalHeader;
 uint64_t kernelBase_address;
+uint64_t kernel32_address;
 
 bool IsInEmulationRange(uint64_t addr) {
   for (const auto &range : valid_ranges) {
@@ -242,6 +243,36 @@ bool PatchKernelBaseFunction(HANDLE hProcess, uintptr_t kernelBase_address,
 
   return success;
 }
+bool PatchKernel32Function(HANDLE hProcess, uintptr_t kernel32_address,
+                             const std::string &funcName,
+                             const BYTE *patchBytes, size_t patchSize) {
+  if (!kernel32_address)
+    return false;
+
+  HMODULE hLocalKernel32 = GetModuleHandleW(L"kernel32.dll");
+  if (!hLocalKernel32)
+    return false;
+
+  FARPROC localFunc = GetProcAddress(hLocalKernel32, funcName.c_str());
+  if (!localFunc)
+    return false;
+
+  uintptr_t offset = (uintptr_t)localFunc - (uintptr_t)hLocalKernel32;
+  LPVOID remoteFuncAddr = (LPVOID)(kernel32_address + offset);
+
+  DWORD oldProtect;
+  if (!VirtualProtectEx(hProcess, remoteFuncAddr, patchSize,
+                        PAGE_EXECUTE_READWRITE, &oldProtect))
+    return false;
+
+  bool success = WriteProcessMemory(hProcess, remoteFuncAddr, patchBytes,
+                                    patchSize, nullptr) != 0;
+
+  VirtualProtectEx(hProcess, remoteFuncAddr, patchSize, oldProtect,
+                   &oldProtect);
+
+  return success;
+}
 
 bool Patch_CheckRemoteDebuggerPresent() {
   BYTE patch[] = {
@@ -252,6 +283,28 @@ bool Patch_CheckRemoteDebuggerPresent() {
 
   return PatchKernelBaseFunction(pi.hProcess, kernelBase_address,
                                  "CheckRemoteDebuggerPresent", patch,
+                                 sizeof(patch));
+}
+bool Patch_VirtualAlloc() {
+  BYTE patch[] = {
+      0x49, 0xC7,0xC1,0x04,0x0,0x0,0x0, // mov r9, 0x04
+      0xff,0x25,0x9B,0x63,0x05,0x00 //jmp qword ptr ds:[RIP - 0X563A1]
+  };
+
+
+  return PatchKernel32Function(pi.hProcess, kernel32_address,
+                                 "VirtualAlloc", patch,
+                                 sizeof(patch));
+}
+bool Patch_VirtualProtect() {
+  BYTE patch[] = {
+      0x49, 0xC7,0xC0,0x04,0x0,0x0,0x0, // mov r9, 0x04
+      0xff,0x25,0x6B,0x1D,0x05,0x00 //jmp qword ptr ds:[RIP - 0X51D71]
+  };
+
+
+  return PatchKernel32Function(pi.hProcess, kernel32_address,
+                                 "VirtualProtect", patch,
                                  sizeof(patch));
 }
 
