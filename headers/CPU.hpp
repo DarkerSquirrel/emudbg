@@ -846,6 +846,7 @@ public:
         {ZYDIS_MNEMONIC_VRSQRTPS, &CPU::emulate_vrsqrtps },
         {ZYDIS_MNEMONIC_SQRTPS, &CPU::emulate_sqrtps },
         {ZYDIS_MNEMONIC_VSQRTPS, &CPU::emulate_vsqrtps },
+        {ZYDIS_MNEMONIC_SQRTSD, &CPU::emulate_sqrtsd },
 
     };
   }
@@ -15543,7 +15544,6 @@ private:
 
       LOG(L"[+] SQRTPS executed (128-bit)");
   }
-
   void emulate_vsqrtps(const ZydisDisassembledInstruction* instr) {
       const auto& dst = instr->operands[0];
       const auto& src = instr->operands[1];
@@ -15586,6 +15586,47 @@ private:
           LOG(L"[+] VSQRTPS executed (256-bit)");
       }
   }
+  void emulate_sqrtsd(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+
+      if (ZydisRegisterGetWidth(ZYDIS_MACHINE_MODE_LONG_64,dst.reg.value)  != 128) {
+          LOG(L"[!] Unsupported operand size for SQRTSD: " << dst.size);
+          return;
+      }
+
+      __m128d dst_old, src_val;
+      if (!read_operand_value<__m128d>(dst, 128, dst_old)) {
+          LOG(L"[!] Failed to read destination operand for SQRTSD");
+          return;
+      }
+      if (!read_operand_value<__m128d>(src, 128, src_val)) {
+          LOG(L"[!] Failed to read source operand for SQRTSD");
+          return;
+      }
+
+
+      alignas(16) double dst_arr[2], src_arr[2];
+      _mm_storeu_pd(dst_arr, dst_old);
+      _mm_storeu_pd(src_arr, src_val);
+
+
+      __m128d res = _mm_sqrt_sd(dst_old, src_val);
+
+      alignas(16) double res_arr[2];
+      _mm_storeu_pd(res_arr, res);
+
+
+
+      if (!write_operand_value<__m128d>(dst, 128, res)) {
+          LOG(L"[!] Failed to write result for SQRTSD");
+          return;
+      }
+
+      LOG(L"[+] SQRTSD executed (128-bit)");
+  }
+
+
 
 
 
