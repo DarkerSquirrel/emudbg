@@ -847,6 +847,7 @@ public:
         {ZYDIS_MNEMONIC_SQRTPS, &CPU::emulate_sqrtps },
         {ZYDIS_MNEMONIC_VSQRTPS, &CPU::emulate_vsqrtps },
         {ZYDIS_MNEMONIC_SQRTSD, &CPU::emulate_sqrtsd },
+        {ZYDIS_MNEMONIC_VFMSUB213PS, &CPU::emulate_vfmsub213ps },
 
     };
   }
@@ -15624,6 +15625,69 @@ private:
       }
 
       LOG(L"[+] SQRTSD executed (128-bit)");
+  }
+  void emulate_vfmsub213ps(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0]; 
+      const auto& src1 = instr->operands[1]; 
+      const auto& src2 = instr->operands[2]; 
+
+      auto width = dst.size;
+
+      if (width == 128) {
+          __m128 vdst, vsrc1, vsrc2;
+          if (!read_operand_value(dst, 128, vdst) ||
+              !read_operand_value(src1, 128, vsrc1) ||
+              !read_operand_value(src2, 128, vsrc2)) {
+              LOG(L"[!] Failed to read operands in VFMSUB213PS (128-bit)");
+              return;
+          }
+
+          alignas(16) float fdst[4], fsrc1[4], fsrc2[4], fres[4];
+          _mm_storeu_ps(fdst, vdst);
+          _mm_storeu_ps(fsrc1, vsrc1);
+          _mm_storeu_ps(fsrc2, vsrc2);
+
+          for (int i = 0; i < 4; i++)
+              fres[i] = (fdst[i] * fsrc1[i]) - fsrc2[i];
+
+          __m128 result = _mm_loadu_ps(fres);
+
+          if (!write_operand_value(dst, 128, result)) {
+              LOG(L"[!] Failed to write VFMSUB213PS result (128-bit)");
+              return;
+          }
+
+          LOG(L"[+] VFMSUB213PS executed (128-bit)");
+      }
+      else if (width == 256) {
+          __m256 vdst, vsrc1, vsrc2;
+          if (!read_operand_value(dst, 256, vdst) ||
+              !read_operand_value(src1, 256, vsrc1) ||
+              !read_operand_value(src2, 256, vsrc2)) {
+              LOG(L"[!] Failed to read operands in VFMSUB213PS (256-bit)");
+              return;
+          }
+
+          alignas(32) float fdst[8], fsrc1[8], fsrc2[8], fres[8];
+          _mm256_storeu_ps(fdst, vdst);
+          _mm256_storeu_ps(fsrc1, vsrc1);
+          _mm256_storeu_ps(fsrc2, vsrc2);
+
+          for (int i = 0; i < 8; i++)
+              fres[i] = (fdst[i] * fsrc1[i]) - fsrc2[i];
+
+          __m256 result = _mm256_loadu_ps(fres);
+
+          if (!write_operand_value(dst, 256, result)) {
+              LOG(L"[!] Failed to write VFMSUB213PS result (256-bit)");
+              return;
+          }
+
+          LOG(L"[+] VFMSUB213PS executed (256-bit)");
+      }
+      else {
+          LOG(L"[!] Unsupported width in VFMSUB213PS: " << (int)width);
+      }
   }
 
 
