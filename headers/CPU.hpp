@@ -850,6 +850,7 @@ public:
         {ZYDIS_MNEMONIC_VFMSUB213PS, &CPU::emulate_vfmsub213ps },
         {ZYDIS_MNEMONIC_VFNMSUB213PD, &CPU::emulate_vfnmsub213pd },
         {ZYDIS_MNEMONIC_VFMSUB213PD, &CPU::emulate_vfmsub213pd },
+        {ZYDIS_MNEMONIC_CWD, &CPU::emulate_cwd },
 
     };
   }
@@ -4789,6 +4790,14 @@ private:
 
     LOG(L"[+] CDQ => EAX = 0x" << std::hex << g_regs.rax.d << L", EDX = 0x"
                                << g_regs.rdx.q);
+  }
+  void emulate_cwd(const ZydisDisassembledInstruction* instr) {
+      int16_t ax = static_cast<int16_t>(g_regs.rax.w); 
+      g_regs.rdx.w = (ax < 0) ? 0xFFFF : 0x0000;        
+
+      LOG(L"[+] CWD => AX = 0x"
+          << std::hex << g_regs.rax.w
+          << L", DX = 0x" << g_regs.rdx.w);
   }
   void emulate_cqo(const ZydisDisassembledInstruction *instr) {
     int64_t rax = static_cast<int64_t>(g_regs.rax.q);
