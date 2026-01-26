@@ -1,6 +1,7 @@
 #pragma once
 
 #include <windows.h>
+#include <intrin.h>
 #include <immintrin.h>
 #include <tchar.h>
 #include <tlhelp32.h>
@@ -15,6 +16,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <array>
+#include <utility>
 
 #include "SaveRVA.hpp"
 #include "XState.hpp"
@@ -25,6 +28,7 @@
 #include "deps/zydis_wrapper.h"
 
 #define CPU_PAUSED (0x1)
+
 
 //------------------------------------------
 // LOG analyze
@@ -342,7 +346,7 @@ bool SetHardwareBreakpointAuto(HANDLE hThread, uint64_t address) {
   }
 
   // Enable the breakpoint locally
-  ctx.Dr7 |= (1ULL << (slot * 2)); // L0–L3 bits
+  ctx.Dr7 |= (1ULL << (slot * 2)); // L0â€“L3 bits
 
   // Set length = 1 byte (00), and type = execute (00)
   ctx.Dr7 &= ~(3 << (16 + slot * 4)); // Clear LEN bits
@@ -469,6 +473,55 @@ void RestoreAllBreakpoints(
   }
 }
 
+
+// ---------------------- Helper for asm instructions with imm operands -----------
+using shuffle_fn = __m128i(*)(__m128i);
+
+template<int Imm>
+__m128i shuffle_hi_impl(__m128i v)
+{
+    return _mm_shufflehi_epi16(v, Imm);
+}
+
+template<std::size_t... Is>
+constexpr auto make_table_hi(std::index_sequence<Is...>)
+{
+    return std::array<shuffle_fn, sizeof...(Is)>{
+        &shuffle_hi_impl<static_cast<int>(Is)>...
+    };
+}
+
+constexpr auto shuffle_table_hi =
+make_table_hi(std::make_index_sequence<256>{});
+
+__m128i emudbg_mm_shufflehi_epi16(__m128i v, uint8_t imm)
+{
+    return shuffle_table_hi[imm](v);
+}
+
+// --- 
+template<int Imm>
+__m128i shuffle_lo_impl(__m128i v)
+{
+    return _mm_shufflelo_epi16(v, Imm);
+}
+
+template<std::size_t... Is>
+constexpr auto make_table_lo(std::index_sequence<Is...>)
+{
+    return std::array<shuffle_fn, sizeof...(Is)>{
+        &shuffle_lo_impl<static_cast<int>(Is)>...
+    };
+}
+
+constexpr auto shuffle_table_lo =
+make_table_hi(std::make_index_sequence<256>{});
+
+__m128i emudbg_mm_shufflelo_epi16(__m128i v, uint8_t imm)
+{
+    return shuffle_table_lo[imm](v);
+}
+
 // ----------------------------- CPU Class Definition -----------------------------
 bool is_paused = 0;
 class CPU {
@@ -538,6 +591,8 @@ public:
         {ZYDIS_MNEMONIC_DIV, &CPU::emulate_div},
         {ZYDIS_MNEMONIC_MOVQ, &CPU::emulate_movq},
         {ZYDIS_MNEMONIC_JNBE, &CPU::emulate_jnbe},
+        {ZYDIS_MNEMONIC_RDRAND, &CPU::emulate_rdrand},
+        {ZYDIS_MNEMONIC_PUNPCKLDQ, &CPU::emulate_punpckldq}, 
         {ZYDIS_MNEMONIC_PUNPCKLQDQ, &CPU::emulate_punpcklqdq},
         {ZYDIS_MNEMONIC_MOVDQA, &CPU::emulate_movdqa},
         {ZYDIS_MNEMONIC_VINSERTF128, &CPU::emulate_vinsertf128},
@@ -590,6 +645,7 @@ public:
         {ZYDIS_MNEMONIC_SCASD, &CPU::emulate_scasd},
         {ZYDIS_MNEMONIC_BSR, &CPU::emulate_bsr},
         {ZYDIS_MNEMONIC_PUNPCKLBW, &CPU::emulate_punpcklbw},
+        {ZYDIS_MNEMONIC_PUNPCKLWD, &CPU::emulate_punpcklwd},
         {ZYDIS_MNEMONIC_CMOVO, &CPU::emulate_cmovo},
         {ZYDIS_MNEMONIC_BSWAP, &CPU::emulate_bswap},
         {ZYDIS_MNEMONIC_CMOVP, &CPU::emulate_cmovp},
@@ -600,6 +656,14 @@ public:
         {ZYDIS_MNEMONIC_JP, &CPU::emulate_jp},
         {ZYDIS_MNEMONIC_CMOVLE, &CPU::emulate_cmovle},
         {ZYDIS_MNEMONIC_PREFETCHW, &CPU::emulate_prefetchw},
+        {ZYDIS_MNEMONIC_PREFETCH, &CPU::emulate_prefetchw},
+        {ZYDIS_MNEMONIC_PREFETCHIT0, &CPU::emulate_prefetchw},
+        {ZYDIS_MNEMONIC_PREFETCHIT1, &CPU::emulate_prefetchw},
+        {ZYDIS_MNEMONIC_PREFETCHNTA, &CPU::emulate_prefetchw},
+        {ZYDIS_MNEMONIC_PREFETCHT0, &CPU::emulate_prefetchw},
+        {ZYDIS_MNEMONIC_PREFETCHT1, &CPU::emulate_prefetchw},
+        {ZYDIS_MNEMONIC_PREFETCHT2, &CPU::emulate_prefetchw},
+        {ZYDIS_MNEMONIC_PREFETCHWT1, &CPU::emulate_prefetchw},
         {ZYDIS_MNEMONIC_BTS, &CPU::emulate_bts},
         {ZYDIS_MNEMONIC_SETP, &CPU::emulate_setp},
         {ZYDIS_MNEMONIC_SETNLE, &CPU::emulate_setnle},
@@ -620,6 +684,7 @@ public:
         {ZYDIS_MNEMONIC_COMISS, &CPU::emulate_comiss},
         {ZYDIS_MNEMONIC_CVTTSS2SI, &CPU::emulate_cvttss2si},
         {ZYDIS_MNEMONIC_CVTSI2SS, &CPU::emulate_cvtsi2ss},
+        {ZYDIS_MNEMONIC_CVTSS2SI, &CPU::emulate_cvtss2si}, 
         {ZYDIS_MNEMONIC_TZCNT, &CPU::emulate_tzcnt},
         {ZYDIS_MNEMONIC_RCPSS, &CPU::emulate_rcpss},
         {ZYDIS_MNEMONIC_DIVSS, &CPU::emulate_divss},
@@ -638,6 +703,7 @@ public:
         {ZYDIS_MNEMONIC_SQRTPD, &CPU::emulate_sqrtpd},
         {ZYDIS_MNEMONIC_IDIV, &CPU::emulate_idiv},
         {ZYDIS_MNEMONIC_LFENCE, &CPU::emulate_lfence},
+        {ZYDIS_MNEMONIC_MFENCE, &CPU::emulate_mfence},
         {ZYDIS_MNEMONIC_VPXOR, &CPU::emulate_vpxor},
         {ZYDIS_MNEMONIC_VPCMPEQW, &CPU::emulate_vpcmpeqw},
         {ZYDIS_MNEMONIC_VPMOVMSKB, &CPU::emulate_vpmovmskb},
@@ -647,8 +713,11 @@ public:
         {ZYDIS_MNEMONIC_UNPCKHPD, &CPU::emulate_unpckhpd},
         {ZYDIS_MNEMONIC_BTC, &CPU::emulate_btc},
         {ZYDIS_MNEMONIC_VPCMPEQB, &CPU::emulate_vpcmpeqb},
-        {ZYDIS_MNEMONIC_PSHUFLW, &CPU::emulate_pshuflw},
+        {ZYDIS_MNEMONIC_PSHUFLW, &CPU::emulate_pshuflw}, 
+        {ZYDIS_MNEMONIC_PSHUFHW, &CPU::emulate_pshufhw}, 
         {ZYDIS_MNEMONIC_PCMPEQB, &CPU::emulate_pcmpeqb},
+        {ZYDIS_MNEMONIC_PCMPEQW, &CPU::emulate_pcmpeqw}, 
+        {ZYDIS_MNEMONIC_PCMPEQD, &CPU::emulate_pcmpeqd}, 
         {ZYDIS_MNEMONIC_PSHUFD, &CPU::emulate_pshufd},
         {ZYDIS_MNEMONIC_POR, &CPU::emulate_por},
         {ZYDIS_MNEMONIC_PMOVMSKB, &CPU::emulate_pmovmskb},
@@ -659,6 +728,7 @@ public:
         {ZYDIS_MNEMONIC_RSQRTPS, &CPU::emulate_rsqrtps},
         {ZYDIS_MNEMONIC_DIVPS, &CPU::emulate_divps},
         {ZYDIS_MNEMONIC_CVTPS2PD, &CPU::emulate_cvtps2pd},
+        {ZYDIS_MNEMONIC_CVTPD2PS, &CPU::emulate_cvtpd2ps},
         {ZYDIS_MNEMONIC_PCMPEQW, &CPU::emulate_pcmpeqw},
         {ZYDIS_MNEMONIC_VMOVNTDQ, &CPU::emulate_vmovntdq},
         {ZYDIS_MNEMONIC_SFENCE, &CPU::emulate_sfence},
@@ -686,6 +756,8 @@ public:
         {ZYDIS_MNEMONIC_VPSHUFB, &CPU::emulate_vpshufb},
         {ZYDIS_MNEMONIC_LZCNT, &CPU::emulate_lzcnt},
         {ZYDIS_MNEMONIC_VPMASKMOVD, &CPU::emulate_vpmaskmovd},
+        {ZYDIS_MNEMONIC_PAND, &CPU::emulate_pand}, 
+        {ZYDIS_MNEMONIC_PANDN, &CPU::emulate_pandn}, 
         {ZYDIS_MNEMONIC_VPAND, &CPU::emulate_vpand},
         {ZYDIS_MNEMONIC_PSHUFB, &CPU::emulate_pshufb},
         {ZYDIS_MNEMONIC_FXSAVE, &CPU::emulate_fxsave},
@@ -698,7 +770,10 @@ public:
         {ZYDIS_MNEMONIC_VPOR, &CPU::emulate_vpor},
         {ZYDIS_MNEMONIC_VPMULUDQ, &CPU::emulate_vpmuludq},
         {ZYDIS_MNEMONIC_VPCMPEQQ, &CPU::emulate_vpcmpeqq},
-        {ZYDIS_MNEMONIC_VPSLLQ, &CPU::emulate_vpsllq},
+        {ZYDIS_MNEMONIC_PSLLW, &CPU::emulate_psllw}, 
+        {ZYDIS_MNEMONIC_PSLLD, &CPU::emulate_pslld}, 
+        {ZYDIS_MNEMONIC_PSLLQ, &CPU::emulate_psllq}, 
+        {ZYDIS_MNEMONIC_VPSLLQ, &CPU::emulate_vpsllq}, 
         {ZYDIS_MNEMONIC_VPANDN, &CPU::emulate_vpandn},
         {ZYDIS_MNEMONIC_VPSLLVQ, &CPU::emulate_vpsllvq},
         {ZYDIS_MNEMONIC_VPCMPGTQ, &CPU::emulate_vpcmpgtq},
@@ -707,6 +782,9 @@ public:
         {ZYDIS_MNEMONIC_VPSHUFD, &CPU::emulate_vpshufd},
         {ZYDIS_MNEMONIC_VPUNPCKLQDQ, &CPU::emulate_vpunpcklqdq},
         {ZYDIS_MNEMONIC_VPUNPCKHQDQ, &CPU::emulate_vpunpckhqdq},
+        {ZYDIS_MNEMONIC_PACKUSWB, &CPU::emulate_packuswb}, 
+        {ZYDIS_MNEMONIC_VPACKUSWB, &CPU::emulate_vpackuswb}, 
+        {ZYDIS_MNEMONIC_PACKUSDW, &CPU::emulate_packusdw}, 
         {ZYDIS_MNEMONIC_VPACKUSDW, &CPU::emulate_vpackusdw},
         {ZYDIS_MNEMONIC_VPMADDWD, &CPU::emulate_vpmaddwd},
         {ZYDIS_MNEMONIC_VPSADBW, &CPU::emulate_vpsadbw},
@@ -727,14 +805,21 @@ public:
         {ZYDIS_MNEMONIC_PADDW, &CPU::emulate_paddw},
         {ZYDIS_MNEMONIC_PADDB, &CPU::emulate_paddb},
         {ZYDIS_MNEMONIC_PMOVZXDQ, &CPU::emulate_pmovzxdq},
+        {ZYDIS_MNEMONIC_PSUBB, &CPU::emulate_psubb},
+        {ZYDIS_MNEMONIC_PSUBW, &CPU::emulate_psubw},
+        {ZYDIS_MNEMONIC_PSUBD, &CPU::emulate_psubd}, 
         {ZYDIS_MNEMONIC_PSUBQ, &CPU::emulate_psubq},
         {ZYDIS_MNEMONIC_VPMOVZXBW, &CPU::emulate_vpmovzxbw},
         {ZYDIS_MNEMONIC_PMOVZXWD, &CPU::emulate_pmovzxwd},
         {ZYDIS_MNEMONIC_VBLENDPS, &CPU::emulate_vblendps},
         {ZYDIS_MNEMONIC_VFMADD213PS, &CPU::emulate_vfmadd213ps},
         {ZYDIS_MNEMONIC_PXOR, &CPU::emulate_pxor},
+        {ZYDIS_MNEMONIC_PMOVSXBW, &CPU::emulate_pmovsxbw}, 
+        {ZYDIS_MNEMONIC_PMOVSXBD, &CPU::emulate_pmovsxbd}, 
+        {ZYDIS_MNEMONIC_PMOVSXBQ, &CPU::emulate_pmovsxbq}, 
         {ZYDIS_MNEMONIC_PMOVSXWD, &CPU::emulate_pmovsxwd},
         {ZYDIS_MNEMONIC_PMOVSXWQ, &CPU::emulate_pmovsxwq},
+        {ZYDIS_MNEMONIC_PMOVSXDQ, &CPU::emulate_pmovsxdq}, 
         {ZYDIS_MNEMONIC_KMOVB, &CPU::emulate_kmovb},
         {ZYDIS_MNEMONIC_KMOVW, &CPU::emulate_kmovw},
         {ZYDIS_MNEMONIC_KMOVD, &CPU::emulate_kmovd},
@@ -765,92 +850,92 @@ public:
         {ZYDIS_MNEMONIC_COMISD, &CPU::emulate_comisd},
         {ZYDIS_MNEMONIC_SYSCALL, &CPU::emulate_syscall},
         {ZYDIS_MNEMONIC_LSL, &CPU::emulate_lsl},
-        {ZYDIS_MNEMONIC_MULPS, &CPU::emulate_mulps },
-        {ZYDIS_MNEMONIC_VSUBPS, &CPU::emulate_vsubps },
-        {ZYDIS_MNEMONIC_SUBPS, &CPU::emulate_subps },
-        {ZYDIS_MNEMONIC_ANDNPS, &CPU::emulate_andnps },
-        {ZYDIS_MNEMONIC_VANDNPS, &CPU::emulate_vandnps },
-        {ZYDIS_MNEMONIC_ADDPS, &CPU::emulate_addps },
-        {ZYDIS_MNEMONIC_MOVHLPS, &CPU::emulate_movhlps },
-        {ZYDIS_MNEMONIC_UNPCKLPD, &CPU::emulate_unpcklpd },
-        {ZYDIS_MNEMONIC_VUNPCKLPD, &CPU::emulate_vunpcklpd },
-        {ZYDIS_MNEMONIC_PMAXUB, &CPU::emulate_pmaxub },
-        {ZYDIS_MNEMONIC_VPMAXUB, &CPU::emulate_vpmaxub },
-        {ZYDIS_MNEMONIC_PMAXSB, &CPU::emulate_pmaxsb },
-        {ZYDIS_MNEMONIC_PMAXSW, &CPU::emulate_pmaxsw },
-        {ZYDIS_MNEMONIC_PMAXSD, &CPU::emulate_pmaxsd },
-        {ZYDIS_MNEMONIC_VPMAXSB, &CPU::emulate_vpmaxsb },
-        {ZYDIS_MNEMONIC_VPMAXSW, &CPU::emulate_vpmaxsw },
-        {ZYDIS_MNEMONIC_VPMAXSD, &CPU::emulate_vpmaxsd },
-        {ZYDIS_MNEMONIC_PMAXUD, &CPU::emulate_pmaxud },
-        {ZYDIS_MNEMONIC_VPMAXUD, &CPU::emulate_vpmaxud },
-        {ZYDIS_MNEMONIC_PMADDUBSW, &CPU::emulate_pmaddubsw },
-        {ZYDIS_MNEMONIC_VPMADDUBSW, &CPU::emulate_vpmaddubsw },
-        {ZYDIS_MNEMONIC_PMULHRSW, &CPU::emulate_pmulhrsw },
-        {ZYDIS_MNEMONIC_VPMULHRSW, &CPU::emulate_vpmulhrsw },
-        {ZYDIS_MNEMONIC_PSIGNB, &CPU::emulate_psignb },
-        {ZYDIS_MNEMONIC_PSIGNW, &CPU::emulate_psignw },
-        {ZYDIS_MNEMONIC_PSIGND, &CPU::emulate_psignd },
-        {ZYDIS_MNEMONIC_VPSIGNB, &CPU::emulate_vpsignb },
-        {ZYDIS_MNEMONIC_VPSIGNW, &CPU::emulate_vpsignw },
-        {ZYDIS_MNEMONIC_VPSIGND, &CPU::emulate_vpsignd },
-        {ZYDIS_MNEMONIC_VPBLENDD, &CPU::emulate_vpblendd },
-        {ZYDIS_MNEMONIC_PMINSB, &CPU::emulate_pminsb },
-        {ZYDIS_MNEMONIC_VPMINSB, &CPU::emulate_vpminsb },
-        {ZYDIS_MNEMONIC_PMINSD, &CPU::emulate_pminsd },
-        {ZYDIS_MNEMONIC_VPMINSD, &CPU::emulate_vpminsd },
-        {ZYDIS_MNEMONIC_PMAXUW, &CPU::emulate_pmaxuw },
-        {ZYDIS_MNEMONIC_VPMAXUW, &CPU::emulate_vpmaxuw },
-        {ZYDIS_MNEMONIC_PMINSW, &CPU::emulate_pminsw },
-        {ZYDIS_MNEMONIC_VPMINSW, &CPU::emulate_vpminsw },
-        {ZYDIS_MNEMONIC_PMINUD, &CPU::emulate_pminud },
-        {ZYDIS_MNEMONIC_VPMINUD, &CPU::emulate_vpminud },
-        {ZYDIS_MNEMONIC_PHADDW, &CPU::emulate_phaddw },
-        {ZYDIS_MNEMONIC_VPHADDW, &CPU::emulate_vphaddw },
-        {ZYDIS_MNEMONIC_PHADDD, &CPU::emulate_phaddd },
-        {ZYDIS_MNEMONIC_VPHADDD, &CPU::emulate_vphaddd },
-        {ZYDIS_MNEMONIC_PHADDSW, &CPU::emulate_phaddsw },
-        {ZYDIS_MNEMONIC_VPHADDSW, &CPU::emulate_vphaddsw },
-        {ZYDIS_MNEMONIC_PHSUBW, &CPU::emulate_phsubw },
-        {ZYDIS_MNEMONIC_VPHSUBW, &CPU::emulate_vphsubw },
-        {ZYDIS_MNEMONIC_PHSUBD, &CPU::emulate_phsubd },
-        {ZYDIS_MNEMONIC_VPHSUBD, &CPU::emulate_vphsubd },
-        {ZYDIS_MNEMONIC_VPGATHERDQ, &CPU::emulate_vpgatherdq },
-        {ZYDIS_MNEMONIC_VPGATHERQQ, &CPU::emulate_vpgatherqq },
-        {ZYDIS_MNEMONIC_VGATHERDPD, &CPU::emulate_vgatherdpd },
-        {ZYDIS_MNEMONIC_VGATHERQPD, &CPU::emulate_vgatherqpd },
-        {ZYDIS_MNEMONIC_VGATHERDPS, &CPU::emulate_vgatherdps },
-        {ZYDIS_MNEMONIC_VGATHERQPS, &CPU::emulate_vgatherqps },
-        {ZYDIS_MNEMONIC_PEXTRQ, &CPU::emulate_pextrq },
-        {ZYDIS_MNEMONIC_VPEXTRQ, &CPU::emulate_vpextrq },
-        {ZYDIS_MNEMONIC_VPBROADCASTB, &CPU::emulate_vpbroadcastb },
-        {ZYDIS_MNEMONIC_VPBROADCASTW, &CPU::emulate_vpbroadcastw },
-        {ZYDIS_MNEMONIC_VPBROADCASTD, &CPU::emulate_vpbroadcastd },
-        {ZYDIS_MNEMONIC_VPBROADCASTQ, &CPU::emulate_vpbroadcastq },
-        {ZYDIS_MNEMONIC_PSRLD, &CPU::emulate_psrld },
-        {ZYDIS_MNEMONIC_PSRLQ, &CPU::emulate_psrlq },
-        {ZYDIS_MNEMONIC_VPSRLW, &CPU::emulate_vpsrlw },
-        {ZYDIS_MNEMONIC_VPSRLD, &CPU::emulate_vpsrld },
-        {ZYDIS_MNEMONIC_VPSRLQ, &CPU::emulate_vpsrlq },
-        {ZYDIS_MNEMONIC_BLENDVPD, &CPU::emulate_blendvpd },
-        {ZYDIS_MNEMONIC_VBLENDVPD, &CPU::emulate_vblendvpd },
-        {ZYDIS_MNEMONIC_BLENDPS, &CPU::emulate_blendps },
-        {ZYDIS_MNEMONIC_SHUFPD, &CPU::emulate_shufpd },
-        {ZYDIS_MNEMONIC_VSHUFPD, &CPU::emulate_vshufpd },
-        {ZYDIS_MNEMONIC_UNPCKHPS, &CPU::emulate_unpckhps },
-        {ZYDIS_MNEMONIC_VUNPCKHPS, &CPU::emulate_vunpckhps },
-        {ZYDIS_MNEMONIC_VUNPCKHPD, &CPU::emulate_vunpckhpd },
-        {ZYDIS_MNEMONIC_VUNPCKLPS, &CPU::emulate_vunpcklps },
-        {ZYDIS_MNEMONIC_VFMADD213PD, &CPU::emulate_vfmadd213pd },
-        {ZYDIS_MNEMONIC_ROUNDSD, &CPU::emulate_roundsd },
-        {ZYDIS_MNEMONIC_VRSQRTPS, &CPU::emulate_vrsqrtps },
-        {ZYDIS_MNEMONIC_SQRTPS, &CPU::emulate_sqrtps },
-        {ZYDIS_MNEMONIC_VSQRTPS, &CPU::emulate_vsqrtps },
-        {ZYDIS_MNEMONIC_SQRTSD, &CPU::emulate_sqrtsd },
-        {ZYDIS_MNEMONIC_VFMSUB213PS, &CPU::emulate_vfmsub213ps },
-        {ZYDIS_MNEMONIC_VFNMSUB213PD, &CPU::emulate_vfnmsub213pd },
-        {ZYDIS_MNEMONIC_VFMSUB213PD, &CPU::emulate_vfmsub213pd },
-        {ZYDIS_MNEMONIC_CWD, &CPU::emulate_cwd },
+        {ZYDIS_MNEMONIC_MULPS, &CPU::emulate_mulps},
+        {ZYDIS_MNEMONIC_VSUBPS, &CPU::emulate_vsubps},
+        {ZYDIS_MNEMONIC_SUBPS, &CPU::emulate_subps},
+        {ZYDIS_MNEMONIC_ANDNPS, &CPU::emulate_andnps},
+        {ZYDIS_MNEMONIC_VANDNPS, &CPU::emulate_vandnps},
+        {ZYDIS_MNEMONIC_ADDPS, &CPU::emulate_addps},
+        {ZYDIS_MNEMONIC_MOVHLPS, &CPU::emulate_movhlps},
+        {ZYDIS_MNEMONIC_UNPCKLPD, &CPU::emulate_unpcklpd},
+        {ZYDIS_MNEMONIC_VUNPCKLPD, &CPU::emulate_vunpcklpd},
+        {ZYDIS_MNEMONIC_PMAXUB, &CPU::emulate_pmaxub},
+        {ZYDIS_MNEMONIC_VPMAXUB, &CPU::emulate_vpmaxub},
+        {ZYDIS_MNEMONIC_PMAXSB, &CPU::emulate_pmaxsb},
+        {ZYDIS_MNEMONIC_PMAXSW, &CPU::emulate_pmaxsw},
+        {ZYDIS_MNEMONIC_PMAXSD, &CPU::emulate_pmaxsd},
+        {ZYDIS_MNEMONIC_VPMAXSB, &CPU::emulate_vpmaxsb},
+        {ZYDIS_MNEMONIC_VPMAXSW, &CPU::emulate_vpmaxsw},
+        {ZYDIS_MNEMONIC_VPMAXSD, &CPU::emulate_vpmaxsd},
+        {ZYDIS_MNEMONIC_PMAXUD, &CPU::emulate_pmaxud},
+        {ZYDIS_MNEMONIC_VPMAXUD, &CPU::emulate_vpmaxud},
+        {ZYDIS_MNEMONIC_PMADDUBSW, &CPU::emulate_pmaddubsw},
+        {ZYDIS_MNEMONIC_VPMADDUBSW, &CPU::emulate_vpmaddubsw},
+        {ZYDIS_MNEMONIC_PMULHRSW, &CPU::emulate_pmulhrsw},
+        {ZYDIS_MNEMONIC_VPMULHRSW, &CPU::emulate_vpmulhrsw},
+        {ZYDIS_MNEMONIC_PSIGNB, &CPU::emulate_psignb},
+        {ZYDIS_MNEMONIC_PSIGNW, &CPU::emulate_psignw},
+        {ZYDIS_MNEMONIC_PSIGND, &CPU::emulate_psignd},
+        {ZYDIS_MNEMONIC_VPSIGNB, &CPU::emulate_vpsignb},
+        {ZYDIS_MNEMONIC_VPSIGNW, &CPU::emulate_vpsignw},
+        {ZYDIS_MNEMONIC_VPSIGND, &CPU::emulate_vpsignd},
+        {ZYDIS_MNEMONIC_VPBLENDD, &CPU::emulate_vpblendd},
+        {ZYDIS_MNEMONIC_PMINSB, &CPU::emulate_pminsb},
+        {ZYDIS_MNEMONIC_VPMINSB, &CPU::emulate_vpminsb},
+        {ZYDIS_MNEMONIC_PMINSD, &CPU::emulate_pminsd},
+        {ZYDIS_MNEMONIC_VPMINSD, &CPU::emulate_vpminsd},
+        {ZYDIS_MNEMONIC_PMAXUW, &CPU::emulate_pmaxuw},
+        {ZYDIS_MNEMONIC_VPMAXUW, &CPU::emulate_vpmaxuw},
+        {ZYDIS_MNEMONIC_PMINSW, &CPU::emulate_pminsw},
+        {ZYDIS_MNEMONIC_VPMINSW, &CPU::emulate_vpminsw},
+        {ZYDIS_MNEMONIC_PMINUD, &CPU::emulate_pminud},
+        {ZYDIS_MNEMONIC_VPMINUD, &CPU::emulate_vpminud},
+        {ZYDIS_MNEMONIC_PHADDW, &CPU::emulate_phaddw},
+        {ZYDIS_MNEMONIC_VPHADDW, &CPU::emulate_vphaddw},
+        {ZYDIS_MNEMONIC_PHADDD, &CPU::emulate_phaddd},
+        {ZYDIS_MNEMONIC_VPHADDD, &CPU::emulate_vphaddd},
+        {ZYDIS_MNEMONIC_PHADDSW, &CPU::emulate_phaddsw},
+        {ZYDIS_MNEMONIC_VPHADDSW, &CPU::emulate_vphaddsw},
+        {ZYDIS_MNEMONIC_PHSUBW, &CPU::emulate_phsubw},
+        {ZYDIS_MNEMONIC_VPHSUBW, &CPU::emulate_vphsubw},
+        {ZYDIS_MNEMONIC_PHSUBD, &CPU::emulate_phsubd},
+        {ZYDIS_MNEMONIC_VPHSUBD, &CPU::emulate_vphsubd},
+        {ZYDIS_MNEMONIC_VPGATHERDQ, &CPU::emulate_vpgatherdq},
+        {ZYDIS_MNEMONIC_VPGATHERQQ, &CPU::emulate_vpgatherqq},
+        {ZYDIS_MNEMONIC_VGATHERDPD, &CPU::emulate_vgatherdpd},
+        {ZYDIS_MNEMONIC_VGATHERQPD, &CPU::emulate_vgatherqpd},
+        {ZYDIS_MNEMONIC_VGATHERDPS, &CPU::emulate_vgatherdps},
+        {ZYDIS_MNEMONIC_VGATHERQPS, &CPU::emulate_vgatherqps},
+        {ZYDIS_MNEMONIC_PEXTRQ, &CPU::emulate_pextrq},
+        {ZYDIS_MNEMONIC_VPEXTRQ, &CPU::emulate_vpextrq},
+        {ZYDIS_MNEMONIC_VPBROADCASTB, &CPU::emulate_vpbroadcastb},
+        {ZYDIS_MNEMONIC_VPBROADCASTW, &CPU::emulate_vpbroadcastw},
+        {ZYDIS_MNEMONIC_VPBROADCASTD, &CPU::emulate_vpbroadcastd},
+        {ZYDIS_MNEMONIC_VPBROADCASTQ, &CPU::emulate_vpbroadcastq},
+        {ZYDIS_MNEMONIC_PSRLD, &CPU::emulate_psrld},
+        {ZYDIS_MNEMONIC_PSRLQ, &CPU::emulate_psrlq},
+        {ZYDIS_MNEMONIC_VPSRLW, &CPU::emulate_vpsrlw},
+        {ZYDIS_MNEMONIC_VPSRLD, &CPU::emulate_vpsrld},
+        {ZYDIS_MNEMONIC_VPSRLQ, &CPU::emulate_vpsrlq},
+        {ZYDIS_MNEMONIC_BLENDVPD, &CPU::emulate_blendvpd},
+        {ZYDIS_MNEMONIC_VBLENDVPD, &CPU::emulate_vblendvpd},
+        {ZYDIS_MNEMONIC_BLENDPS, &CPU::emulate_blendps},
+        {ZYDIS_MNEMONIC_SHUFPD, &CPU::emulate_shufpd},
+        {ZYDIS_MNEMONIC_VSHUFPD, &CPU::emulate_vshufpd},
+        {ZYDIS_MNEMONIC_UNPCKHPS, &CPU::emulate_unpckhps},
+        {ZYDIS_MNEMONIC_VUNPCKHPS, &CPU::emulate_vunpckhps},
+        {ZYDIS_MNEMONIC_VUNPCKHPD, &CPU::emulate_vunpckhpd},
+        {ZYDIS_MNEMONIC_VUNPCKLPS, &CPU::emulate_vunpcklps},
+        {ZYDIS_MNEMONIC_VFMADD213PD, &CPU::emulate_vfmadd213pd},
+        {ZYDIS_MNEMONIC_ROUNDSD, &CPU::emulate_roundsd},
+        {ZYDIS_MNEMONIC_VRSQRTPS, &CPU::emulate_vrsqrtps},
+        {ZYDIS_MNEMONIC_SQRTPS, &CPU::emulate_sqrtps},
+        {ZYDIS_MNEMONIC_VSQRTPS, &CPU::emulate_vsqrtps},
+        {ZYDIS_MNEMONIC_SQRTSD, &CPU::emulate_sqrtsd},
+        {ZYDIS_MNEMONIC_VFMSUB213PS, &CPU::emulate_vfmsub213ps},
+        {ZYDIS_MNEMONIC_VFNMSUB213PD, &CPU::emulate_vfnmsub213pd},
+        {ZYDIS_MNEMONIC_VFMSUB213PD, &CPU::emulate_vfmsub213pd},
+        {ZYDIS_MNEMONIC_CWD, &CPU::emulate_cwd},
 
     };
   }
@@ -4218,6 +4303,57 @@ private:
 
     LOG(L"[+] PCMPEQW executed");
   }
+  void emulate_pcmpeqd(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      auto width = dst.size;
+
+      if (width != 128 && width != 256) {
+          LOG(L"[!] Unsupported operand width in PCMPEQD: " << (int)width);
+          return;
+      }
+
+      if (width == 128) {
+          __m128i v_dst, v_src;
+          if (!read_operand_value<__m128i>(dst, width, v_dst) ||
+              !read_operand_value<__m128i>(src, width, v_src)) {
+              LOG(L"[!] Failed to read source operands in PCMPEQD (128-bit)");
+              return;
+          }
+
+          __m128i result = _mm_cmpeq_epi32(v_dst, v_src);
+
+          if (!write_operand_value<__m128i>(dst, width, result)) {
+              LOG(L"[!] Failed to write result in PCMPEQD (128-bit)");
+              return;
+          }
+      }
+      else if (width == 256) {
+          __m256i v_dst, v_src;
+          if (!read_operand_value<__m256i>(dst, width, v_dst) ||
+              !read_operand_value<__m256i>(src, width, v_src)) {
+              LOG(L"[!] Failed to read source operands in PCMPEQD (256-bit)");
+              return;
+          }
+
+#if defined(__AVX2__)
+          __m256i result = _mm256_cmpeq_epi32(v_dst, v_src);
+#else
+          __m128i lo = _mm_cmpeq_epi32(_mm256_castsi256_si128(v_dst),
+              _mm256_castsi256_si128(v_src));
+          __m128i hi = _mm_cmpeq_epi32(_mm256_extracti128_si256(v_dst, 1),
+              _mm256_extracti128_si256(v_src, 1));
+          __m256i result = _mm256_set_m128i(hi, lo);
+#endif
+
+          if (!write_operand_value<__m256i>(dst, width, result)) {
+              LOG(L"[!] Failed to write result in PCMPEQD (256-bit)");
+              return;
+          }
+      }
+
+      LOG(L"[+] PCMPEQD executed");
+  }
   void emulate_vpandn(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
     const auto &src1 = instr->operands[1];
@@ -4260,6 +4396,147 @@ private:
     }
 
     LOG(L"[+] VPANDN executed successfully");
+  }
+  void emulate_psllw(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      auto width = dst.size;
+
+      if (width != 128) {
+          LOG(L"[!] Unsupported width in psllw: " << (int)width);
+          return;
+      }
+
+      __m128i v;
+      if (!read_operand_value(dst, dst.size, v)) {
+          LOG(L"[!] Failed to read destination operand in psllw");
+          return;
+      }
+
+      __m128i result;
+      if (src.size == 128) {
+          __m128i count;
+          if (!read_operand_value(src, src.size, count)) {
+              LOG(L"[!] Failed to read source operand in psllw");
+              return;
+          }
+
+          result = _mm_sll_epi16(v, count);
+      }
+      else if (src.size == 8) {
+          int count;
+          if (!read_operand_value(src, src.size, count)) {
+              LOG(L"[!] Failed to read source operand in psllw");
+              return;
+          }
+
+          result = _mm_slli_epi16(v, count);
+      }
+      else {
+          LOG(L"[!] Unsupported width in psllw source operand: " << (int)src.width);
+          return;
+      }
+
+      if (!write_operand_value(dst, width, result)) {
+          LOG(L"[!] Failed to write result in psllw");
+          return;
+      }
+
+      LOG(L"[+] PSLLW executed successfully");
+  }
+  void emulate_pslld(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      auto width = dst.size;
+
+      if (width != 128) {
+          LOG(L"[!] Unsupported width in pslld: " << (int)width);
+          return;
+      } 
+
+      __m128i v;
+      if (!read_operand_value(dst, dst.size, v)) {
+          LOG(L"[!] Failed to read destination operand in pslld");
+          return;
+      }
+
+      __m128i result;
+      if (src.size == 128) {
+          __m128i count;
+          if (!read_operand_value(src, src.size, count)) {
+              LOG(L"[!] Failed to read source operand in pslld");
+              return;
+          }
+
+          result = _mm_sll_epi32(v, count);
+      } 
+      else if (src.size == 8) {
+          int count;
+          if (!read_operand_value(src, src.size, count)) {
+              LOG(L"[!] Failed to read source operand in pslld");
+              return;
+          }
+
+          result = _mm_slli_epi32(v, count);
+      }
+      else {
+          LOG(L"[!] Unsupported width in pslld source operand: " << (int)src.width);
+          return;
+      }
+
+      if (!write_operand_value(dst, width, result)) {
+          LOG(L"[!] Failed to write result in pslld");
+          return;
+      }
+
+      LOG(L"[+] PSLLD executed successfully");
+  }
+  void emulate_psllq(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      auto width = dst.size;
+
+      if (width != 128) {
+          LOG(L"[!] Unsupported width in psllq: " << (int)width);
+          return;
+      }
+
+      __m128i v;
+      if (!read_operand_value(dst, dst.size, v)) {
+          LOG(L"[!] Failed to read destination operand in psllq");
+          return;
+      }
+
+      __m128i result;
+      if (src.size == 128) {
+          __m128i count;
+          if (!read_operand_value(src, src.size, count)) {
+              LOG(L"[!] Failed to read source operand in psllq");
+              return;
+          }
+
+          result = _mm_sll_epi64(v, count);
+      }
+      else if (src.size == 8) {
+          int count;
+          if (!read_operand_value(src, src.size, count)) {
+              LOG(L"[!] Failed to read source operand in psllq");
+              return;
+          }
+
+          result = _mm_slli_epi64(v, count);
+      }
+      else {
+          LOG(L"[!] Unsupported width in psllq source operand: " << (int)src.width);
+          return;
+      }
+
+      if (!write_operand_value(dst, width, result)) {
+          LOG(L"[!] Failed to write result in psllq");
+          return;
+      }
+
+      LOG(L"[+] PSLLQ executed successfully");
   }
   void emulate_vpsllq(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
@@ -4308,11 +4585,14 @@ private:
 
     LOG(L"[+] VPSLLQ executed successfully");
   }
+  
+  
   void emulate_pshuflw(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
     const auto &src = instr->operands[1];
     const auto &imm = instr->operands[2];
 
+    
     if (dst.size != 128) {
       LOG(L"[!] Unsupported operand size for PSHUFLW: " << dst.size);
       return;
@@ -4324,23 +4604,12 @@ private:
       return;
     }
 
-    uint8_t shuffle_imm = static_cast<uint8_t>(imm.imm.value.u & 0xFF);
-
-    alignas(16) uint16_t words[8];
-    _mm_store_si128((__m128i *)words, src_val);
-
-    uint16_t shuffled_words[8];
-
-    for (int i = 0; i < 4; ++i) {
-      uint8_t idx = (shuffle_imm >> (i * 2)) & 0x3;
-      shuffled_words[i] = words[idx];
+    int n = 0;
+    if (!read_operand_value(imm, imm.size, n)) {
+        LOG(L"[!] Failed to read imm operand for PSHUFLW");
+        return;
     }
-
-    for (int i = 4; i < 8; ++i) {
-      shuffled_words[i] = words[i];
-    }
-
-    __m128i result = _mm_load_si128((__m128i *)shuffled_words);
+    __m128i result = emudbg_mm_shufflelo_epi16(src_val, n);
 
     if (!write_operand_value<__m128i>(dst, 128, result)) {
       LOG(L"[!] Failed to write result for PSHUFLW");
@@ -4348,6 +4617,39 @@ private:
     }
 
     LOG(L"[+] PSHUFLW executed");
+    
+  }
+  //__m128i emudbg_mm_shufflehi_epi16(__m128i v, uint8_t imm);
+  void emulate_pshufhw(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      const auto& imm = instr->operands[2];
+
+      if (dst.size != 128) {
+          LOG(L"[!] Unsupported operand size for PSHUFHW: " << dst.size);
+          return;
+      }
+      
+      __m128i src_val;
+      if (!read_operand_value<__m128i>(src, src.size, src_val)) {
+          LOG(L"[!] Failed to read source operand for PSHUFHW");
+          return;
+      }
+
+      int n;
+      if (!read_operand_value(imm, imm.size, n)) {
+          LOG(L"[!] Failed to read imm operand for PSHUFHW");
+          return;
+      }
+      
+      __m128i result = emudbg_mm_shufflehi_epi16(src_val,n);
+      
+      if (!write_operand_value<__m128i>(dst, 128, result)) {
+          LOG(L"[!] Failed to write result for PSHUFHW");
+          return;
+      }
+
+      LOG(L"[+] PSHUFHW executed");
   }
   void emulate_shufps(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
@@ -5199,7 +5501,7 @@ private:
     }
 
     LOG_analyze(BLUE, "[+] SGDT executed at: 0x" << std::hex << g_regs.rip
-                                                 << " — GDTR written");
+                                                 << " â€” GDTR written");
   }
   void emulate_prefetchw(const ZydisDisassembledInstruction *instr) {}
   void emulate_vinsertf128(const ZydisDisassembledInstruction *instr) {
@@ -5875,7 +6177,7 @@ private:
 
     uint64_t result = 0;
     switch (instr->info.operand_width) {
-    case 16: // Technically invalid for BSWAP — optional warning
+    case 16: // Technically invalid for BSWAP â€” optional warning
       LOG(L"[!] BSWAP does not support 16-bit operands.");
       return;
     case 32:
@@ -6015,6 +6317,44 @@ private:
     LOG(L"[+] RCL => 0x" << std::hex << val);
     LOG("OF : " << g_regs.rflags.flags.OF);
     LOG("CF : " << g_regs.rflags.flags.CF);
+  }
+  void emulate_pand(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      uint32_t width = dst.size;
+
+      if (width == 128) {
+          __m128i val1, val2;
+          if (!read_operand_value(dst, width, val1) ||
+              !read_operand_value(src, width, val2)) {
+              LOG(L"[!] Failed to read operands in PAND (128-bit)");
+              return;
+          }
+          __m128i result = _mm_and_si128(val1, val2);
+          write_operand_value(dst, width, result);
+      }
+      else {
+          LOG(L"[!] Unsupported width in PAND: " << width);
+      }
+  }
+  void emulate_pandn(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      uint32_t width = dst.size;
+
+      if (width == 128) {
+          __m128i val1, val2;
+          if (!read_operand_value(dst, width, val1) ||
+              !read_operand_value(src, width, val2)) {
+              LOG(L"[!] Failed to read operands in PANDN (128-bit)");
+              return;
+          }
+          __m128i result = _mm_andnot_si128(val1, val2);
+          write_operand_value(dst, width, result);
+      }
+      else {
+          LOG(L"[!] Unsupported width in PANDN: " << width);
+      }
   }
   void emulate_vpand(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
@@ -6657,6 +6997,41 @@ private:
                 : L"[mem]")
         << L" => " << std::fixed << converted);
   }
+  void emulate_cvtss2si(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0]; // Integer (reg/mem)
+      const auto& src = instr->operands[1]; // XMM register
+
+      __m128 src_val;
+      uint64_t dst_val = 0;
+
+      if (!read_operand_value(dst, dst.size, dst_val)) {
+          LOG(L"[!] Failed to read destination interger for CVTSS2SI");
+          return;
+      }
+
+      if (!read_operand_value(src, 128, src_val)) {
+          LOG(L"[!] Failed to read source XMM for CVTSS2SI");
+          return;
+      }
+
+      int64_t result;
+      if (dst.size == 32) {
+          result = static_cast<int64_t>(src_val.m128_f32[0]);
+          write_operand_value(dst, 32, result);
+      }
+      else if (dst.size == 64) {
+          result = static_cast<int64_t>(src_val.m128_i64[0]);
+          write_operand_value(dst, 64, result);
+      }
+      else {
+          LOG(L"[!] Unsupported integer size for CVTSS2SI: " << dst.size);
+          return;
+      }
+
+      LOG(L"[+] CVTSS2SI -> float: " << src_val << std::dec << L", int: "
+          << result);
+
+}
   void emulate_cvtsi2ss(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0]; // XMM register
     const auto &src = instr->operands[1]; // Integer (reg/mem)
@@ -6721,6 +7096,36 @@ private:
     LOG(L"[+] CVTSS2SD xmm" << (dst.reg.value - ZYDIS_REGISTER_XMM0) << ", xmm"
                             << (src.reg.value - ZYDIS_REGISTER_XMM0) << L" => "
                             << std::fixed << converted);
+  }
+  void emulate_cvtpd2ps(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0]; // XMM register (dest)
+      const auto& src = instr->operands[1]; // XMM register or memory (src)
+
+      __m128d src_val_f64;
+      __m128 dst_val_f32;
+
+      // Read source (packed double-precision floats)
+      if (!read_operand_value(src, 128, src_val_f64)) {
+          LOG(L"[!] Failed to read source operand for CVTPD2PS");
+          return;
+      }
+
+      // Convert lower two double to floats
+      double f0 = src_val_f64.m128d_f64[0];
+      double f1 = src_val_f64.m128d_f64[1];
+      src_val_f64.m128d_f64[0] = static_cast<float> (f0);
+      src_val_f64.m128d_f64[1] = static_cast<float> (f1);
+
+      // Write result (packed doubles) to destination
+      if (!write_operand_value(dst, 128, dst_val_f32)) {
+          LOG(L"[!] Failed to write result for CVTPD2PS");
+          return;
+      }
+
+      LOG(L"[+] CVTPD2PS xmm" << (dst.reg.value - ZYDIS_REGISTER_XMM0) << ", xmm"
+          << (src.reg.value - ZYDIS_REGISTER_XMM0) << L" => ["
+          << dst_val_f64.m128d_32[0] << L", "
+          << dst_val_f64.m128d_f32[1] << L"]");
   }
   void emulate_cvtps2pd(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0]; // XMM register (dest)
@@ -6830,6 +7235,25 @@ private:
     LOG(L"[+] FNSTCW executed: stored FPU Control Word = 0x" << std::hex
                                                              << cw_val);
   }
+  void emulate_punpckldq(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+
+      __m128i dst_val, src_val;
+      if (!read_operand_value(dst, 128, dst_val) ||
+          !read_operand_value(src, 128, src_val)) {
+          LOG(L"[!] Unsupported operands for PUNPCKLDQ");
+          return;
+      }
+
+      __m128i result = _mm_unpacklo_epi32(dst_val, src_val);
+
+      write_operand_value(dst, 128, result);
+
+      LOG(L"[+] PUNPCKLDQ xmm" << (dst.reg.value - ZYDIS_REGISTER_XMM0)
+          << ", xmm"
+          << (src.reg.value - ZYDIS_REGISTER_XMM0));
+  }
   void emulate_punpcklqdq(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
     const auto &src = instr->operands[1];
@@ -6936,6 +7360,23 @@ private:
     LOG(L"[+] PUNPCKLBW xmm" << (dst.reg.value - ZYDIS_REGISTER_XMM0) << ", xmm"
                              << (src.reg.value - ZYDIS_REGISTER_XMM0));
   }
+  void emulate_punpcklwd(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+
+      __m128i dst_val, src_val;
+      if (!read_operand_value(dst, 128, dst_val) ||
+          !read_operand_value(src, 128, src_val)) {
+          LOG(L"[!] Unsupported operands for PUNPCKLWD");
+          return;
+      }
+
+      __m128i result = _mm_unpacklo_epi16(dst_val, src_val);
+      write_operand_value(dst, 128, result);
+
+      LOG(L"[+] PUNPCKLWD xmm" << (dst.reg.value - ZYDIS_REGISTER_XMM0) << ", xmm"
+          << (src.reg.value - ZYDIS_REGISTER_XMM0));
+  }
   void emulate_movss(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
     const auto &src = instr->operands[1];
@@ -7031,6 +7472,119 @@ private:
     }
 
     LOG(L"[+] VPUNPCKHQDQ executed (" << width << L"-bit)");
+  }
+  void emulate_packuswb(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      auto width = dst.size;
+
+      if (width != 128) {
+          LOG(L"[!] Unsupported width packuswb: " << (int)width);
+          return;
+      }
+
+      __m128i a, b;
+      if (!read_operand_value<__m128i>(dst, width, a) ||
+          !read_operand_value<__m128i>(src, width, b)) {
+          LOG(L"[!] Failed to read operands in packuswb (128-bit)");
+          return;
+      }
+
+      __m128i result = _mm_packus_epi16(a, b);
+
+      if (!write_operand_value<__m128i>(dst, width, result)) {
+          LOG(L"[!] Failed to write result in packuswb (128-bit)");
+          return;
+      }
+
+      LOG(L"[+] PACKUSWB executed (" << width << L"-bit)");
+  }
+  void emulate_vpackuswb(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src1 = instr->operands[1];
+      const auto& src2 = instr->operands[2];
+      auto width = dst.size;
+
+      if (width != 128 && width != 256 && width != 512) {
+          LOG(L"[!] Unsupported width in vpackuswb: " << (int)width);
+          return;
+      }
+
+      if (width == 128) {
+          __m128i a, b;
+          if (!read_operand_value<__m128i>(src1, width, a) ||
+              !read_operand_value<__m128i>(src2, width, b)) {
+              LOG(L"[!] Failed to read operands in vpackuswb (128-bit)");
+              return;
+          }
+
+          __m128i result = _mm_packus_epi16(a, b);
+
+          if (!write_operand_value<__m128i>(dst, width, result)) {
+              LOG(L"[!] Failed to write result in vpackuswb (128-bit)");
+              return;
+          }
+      }
+
+      else if (width == 256) {
+          __m256i a, b;
+          if (!read_operand_value<__m256i>(src1, width, a) ||
+              !read_operand_value<__m256i>(src2, width, b)) {
+              LOG(L"[!] Failed to read operands in vpackuswb (256-bit)");
+              return;
+          }
+
+          __m256i result = _mm256_packus_epi16(a, b);
+
+          if (!write_operand_value<__m256i>(dst, width, result)) {
+              LOG(L"[!] Failed to write result in vpackuswb (256-bit)");
+              return;
+          }
+      }
+
+      else {
+          __m512i a, b;
+          if (!read_operand_value<__m512i>(src1, width, a) ||
+              !read_operand_value<__m512i>(src2, width, b)) {
+              LOG(L"[!] Failed to read operands in vpackuswb (512-bit)");
+              return;
+          }
+
+          __m512i result = _mm512_packus_epi16(a, b);
+
+          if (!write_operand_value<__m512i>(dst, width, result)) {
+              LOG(L"[!] Failed to write result in vpackuswb (512-bit)");
+              return;
+          }
+      }
+
+      LOG(L"[+] VPACKUSWB executed (" << width << L"-bit)");
+  }
+  void emulate_packusdw(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      auto width = dst.size;
+
+      if (width != 128) {
+          LOG(L"[!] Unsupported width packusdw: " << (int)width);
+          return;
+      }
+
+      __m128i a, b;
+      if (!read_operand_value<__m128i>(dst, width, a) ||
+          !read_operand_value<__m128i>(src, width, b)) {
+          LOG(L"[!] Failed to read operands in packusdw (128-bit)");
+          return;
+      }
+
+      __m128i result = _mm_packus_epi32(a, b);
+
+      if (!write_operand_value<__m128i>(dst, width, result)) {
+          LOG(L"[!] Failed to write result in packusdw (128-bit)");
+          return;
+      }
+
+      LOG(L"[+] PACKUSDW executed (" << width << L"-bit)");
   }
   void emulate_vpackusdw(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
@@ -8680,8 +9234,13 @@ private:
       LOG(L"[+] CMOVS skipped: SF == 0");
     }
   }
-  void emulate_lfence(const ZydisDisassembledInstruction *instr) {
-    LOG(L"[+] LFENCE executed");
+  void emulate_lfence(const ZydisDisassembledInstruction* instr) {
+      _mm_lfence();
+      LOG(L"[+] LFENCE executed");
+  }
+  void emulate_mfence(const ZydisDisassembledInstruction* instr) {
+      _mm_mfence();
+      LOG(L"[+] MFENCE executed");
   }
   void emulate_mov(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0], src = instr->operands[1];
@@ -8906,6 +9465,79 @@ private:
     LOG(L"[+] PMOVZXDQ executed on " << ZydisRegisterGetString(dst.reg.value)
                                      << L" => [" << std::hex << lo << L"," << hi
                                      << L"]");
+  }
+  void emulate_psubb(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+
+      uint32_t width = dst.size;
+
+      if (width == 128) {
+          __m128i a, b;
+          if (!read_operand_value(dst, 128, a) ||
+              !read_operand_value(src, 128, b)) {
+              LOG(L"[!] Failed to read operands in PSUBB (128-bit)");
+              return;
+          }
+          __m128i result = _mm_sub_epi8(a, b);
+          if (!write_operand_value(dst, 128, result)) {
+              LOG(L"[!] Failed to write result in PSUBB (128-bit)");
+              return;
+          }
+          LOG(L"[+] PSUBB (XMM) executed");
+      }
+     
+      else {
+          LOG(L"[!] Unsupported width in PSUBB: " << width);
+      }
+  }
+  void emulate_psubw(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+
+      uint32_t width = dst.size;
+
+      if (width == 128) {
+          __m128i a, b;
+          if (!read_operand_value(dst, 128, a) ||
+              !read_operand_value(src, 128, b)) {
+              LOG(L"[!] Failed to read operands in PSUBW (128-bit)");
+              return;
+          }
+          __m128i result = _mm_sub_epi16(a, b);
+          if (!write_operand_value(dst, 128, result)) {
+              LOG(L"[!] Failed to write result in PSUBW (128-bit)");
+              return;
+          }
+          LOG(L"[+] PSUBW (XMM) executed");
+      }
+      else {
+          LOG(L"[!] Unsupported width in PSUBW: " << width);
+      }
+  }
+  void emulate_psubd(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+
+      uint32_t width = dst.size;
+
+      if (width == 128) {
+          __m128i a, b;
+          if (!read_operand_value(dst, 128, a) ||
+              !read_operand_value(src, 128, b)) {
+              LOG(L"[!] Failed to read operands in PSUBD (128-bit)");
+              return;
+          }
+          __m128i result = _mm_sub_epi32(a, b);
+          if (!write_operand_value(dst, 128, result)) {
+              LOG(L"[!] Failed to write result in PSUBD (128-bit)");
+              return;
+          }
+          LOG(L"[+] PSUBD (XMM) executed");
+      }
+      else {
+          LOG(L"[!] Unsupported width in PSUBD: " << width);
+      }
   }
   void emulate_psubq(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
@@ -9365,6 +9997,43 @@ private:
       g_regs.rip += instr->info.length;
     }
   }
+  void emulate_rdrand(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto width = dst.size;
+
+
+      if (width == 64) {
+          uint64_t result;
+          if (!_rdrand64_step(&result))
+              result = rand();
+          if (write_operand_value(dst, 64, result)) {
+              LOG(L"[!] Failed to write new value to YMM register");
+              return;
+          }
+      }
+      else if (width == 32) {
+          unsigned int result;
+          if (!_rdrand32_step(&result))
+              result = rand();
+          if (write_operand_value(dst, 32, result)) {
+              LOG(L"[!] Failed to write new value to YMM register");
+              return;
+          }
+      }
+      else if (width == 16) {
+          unsigned short result;
+          if (!_rdrand16_step(&result))
+              result = rand();
+          if (write_operand_value(dst, 16, result)) {
+              LOG(L"[!] Failed to write new value to YMM register");
+              return;
+          }
+      }
+      else {
+          LOG(L"[!] Unsupported width in randr: " << (int)width);
+          return;
+      }
+  }
   void emulate_movsd(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
     const auto &src = instr->operands[1];
@@ -9816,7 +10485,7 @@ private:
       memcpy(&xmm_val, &mem_val, 4);     // Copy into low 4 bytes
 
       if (!write_operand_value<__m128>(dst, 128, xmm_val)) {
-        LOG(L"[!] Failed to write to XMM register");
+                                                                                                                                                                                                                                                                                                                            LOG(L"[!] Failed to write to XMM register");
         return;
       }
 
@@ -10896,6 +11565,87 @@ private:
       g_regs.rip += instr->info.length;
     }
   }
+  void emulate_pmovsxbw(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      const auto width = dst.size;
+
+
+      if (width != 128) {
+          LOG(L"[!] Unsupported width in pmovsxbw: " << (int)width);
+          return;
+      }
+
+      __m128i src_val;
+      if (!read_operand_value(src, 128, src_val)) {
+          LOG(L"[!] Failed to read source operand in pmovsxbw");
+          return;
+      }
+
+      __m128i result = _mm_cvtepi8_epi16(src_val);
+
+      if (!write_operand_value(dst, 128, result)) {
+          LOG(L"[!] Failed to write result in pmovsxbw");
+          return;
+      }
+
+      LOG(L"[+] PMOVSXBW executed (8-bit -> 16-bit sign-extend)");
+
+  }
+  void emulate_pmovsxbd(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      const auto width = dst.size;
+
+
+      if (width != 128) {
+          LOG(L"[!] Unsupported width in pmovsxbd: " << (int)width);
+          return;
+      }
+
+      __m128i src_val;
+      if (!read_operand_value(src, 128, src_val)) {
+          LOG(L"[!] Failed to read source operand in pmovsxbd");
+          return;
+      }
+
+      __m128i result = _mm_cvtepi8_epi32(src_val);
+
+      if (!write_operand_value(dst, 128, result)) {
+          LOG(L"[!] Failed to write result in pmovsxbd");
+          return;
+      }
+
+      LOG(L"[+] PMOVSXBD executed (8-bit -> 32-bit sign-extend)");
+  
+  }
+  void emulate_pmovsxbq(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      const auto width = dst.size;
+
+
+      if (width != 128) {
+          LOG(L"[!] Unsupported width in pmovsxbq: " << (int)width);
+          return;
+      }
+
+      __m128i src_val;
+      if (!read_operand_value(src, 128, src_val)) {
+          LOG(L"[!] Failed to read source operand in pmovsxbq");
+          return;
+      }
+
+      __m128i result = _mm_cvtepi8_epi64(src_val);
+
+      if (!write_operand_value(dst, 128, result)) {
+          LOG(L"[!] Failed to write result in pmovsxbq");
+          return;
+      }
+
+      LOG(L"[+] PMOVSXBQ executed (8-bit -> 64-bit sign-extend)");
+
+  }
   void emulate_pmovsxwd(const ZydisDisassembledInstruction *instr) {
     const auto &dst = instr->operands[0];
     const auto &src = instr->operands[1];
@@ -10945,6 +11695,31 @@ private:
     }
 
     LOG(L"[+] PMOVSXWQ executed (16-bit -> 64-bit sign-extend)");
+  }
+  void emulate_pmovsxdq(const ZydisDisassembledInstruction* instr) {
+      const auto& dst = instr->operands[0];
+      const auto& src = instr->operands[1];
+      const auto width = dst.size;
+
+      if (width != 128) {
+          LOG(L"[!] Unsupported width in pmovsxdq: " << (int)width);
+          return;
+      }
+
+      __m128i src_val;
+      if (!read_operand_value(src, 128, src_val)) {
+          LOG(L"[!] Failed to read source operand in pmovsxdq");
+          return;
+      }
+
+      __m128i result = _mm_cvtepi32_epi64(src_val);
+
+      if (!write_operand_value(dst, 128, result)) {
+          LOG(L"[!] Failed to write result in pmovsxdq");
+          return;
+      }
+
+      LOG(L"[+] PMOVSDQ executed (32-bit -> 64-bit sign-extend)");
   }
   void emulate_kmovb(const ZydisDisassembledInstruction *instr) {
     LOG(L"[+] kmovb ");
