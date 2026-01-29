@@ -541,403 +541,401 @@ public:
 
   // ------------------- Constructor -------------------
   CPU(HANDLE thread) : hThread(thread) {
-    dispatch_table = {
-        {ZYDIS_MNEMONIC_MOV, &CPU::emulate_mov},
-        {ZYDIS_MNEMONIC_ADD, &CPU::emulate_add},
-        {ZYDIS_MNEMONIC_SUB, &CPU::emulate_sub},
-        {ZYDIS_MNEMONIC_XOR, &CPU::emulate_xor},
-        {ZYDIS_MNEMONIC_AND, &CPU::emulate_and},
-        {ZYDIS_MNEMONIC_OR, &CPU::emulate_or},
-        {ZYDIS_MNEMONIC_CMP, &CPU::emulate_cmp},
-        {ZYDIS_MNEMONIC_TEST, &CPU::emulate_test},
-        {ZYDIS_MNEMONIC_SHL, &CPU::emulate_shl},
-        {ZYDIS_MNEMONIC_SHR, &CPU::emulate_shr},
-        {ZYDIS_MNEMONIC_SAR, &CPU::emulate_sar},
-        {ZYDIS_MNEMONIC_ROL, &CPU::emulate_rol},
-        {ZYDIS_MNEMONIC_ROR, &CPU::emulate_ror},
-        {ZYDIS_MNEMONIC_JZ, &CPU::emulate_jz},
-        {ZYDIS_MNEMONIC_JNZ, &CPU::emulate_jnz},
-        {ZYDIS_MNEMONIC_NOP, &CPU::emulate_nop},
-        {ZYDIS_MNEMONIC_PUSH, &CPU::emulate_push},
-        {ZYDIS_MNEMONIC_POP, &CPU::emulate_pop},
-        {ZYDIS_MNEMONIC_CALL, &CPU::emulate_call},
-        {ZYDIS_MNEMONIC_RET, &CPU::emulate_ret},
-        {ZYDIS_MNEMONIC_JMP, &CPU::emulate_jmp},
-        {ZYDIS_MNEMONIC_LEA, &CPU::emulate_lea},
-        {ZYDIS_MNEMONIC_CPUID, &CPU::emulate_cpuid},
-        {ZYDIS_MNEMONIC_NOT, &CPU::emulate_not},
-        {ZYDIS_MNEMONIC_NEG, &CPU::emulate_neg},
-        {ZYDIS_MNEMONIC_XCHG, &CPU::emulate_xchg},
-        {ZYDIS_MNEMONIC_MUL, &CPU::emulate_mul},
-        {ZYDIS_MNEMONIC_IMUL, &CPU::emulate_imul},
-        {ZYDIS_MNEMONIC_SETNZ, &CPU::emulate_setnz},
-        {ZYDIS_MNEMONIC_SETZ, &CPU::emulate_setz},
-        {ZYDIS_MNEMONIC_BT, &CPU::emulate_bt},
-        {ZYDIS_MNEMONIC_BTR, &CPU::emulate_btr},
-        {ZYDIS_MNEMONIC_JNB, &CPU::emulate_jnb},
-        {ZYDIS_MNEMONIC_XGETBV, &CPU::emulate_xgetbv},
-        {ZYDIS_MNEMONIC_JL, &CPU::emulate_jl},
-        {ZYDIS_MNEMONIC_CMPXCHG, &CPU::emulate_cmpxchg},
-        {ZYDIS_MNEMONIC_JLE, &CPU::emulate_jle},
-        {ZYDIS_MNEMONIC_MOVSXD, &CPU::emulate_movsxd},
-        {ZYDIS_MNEMONIC_MOVZX, &CPU::emulate_movzx},
-        {ZYDIS_MNEMONIC_DEC, &CPU::emulate_dec},
-        {ZYDIS_MNEMONIC_JB, &CPU::emulate_jb},
-        {ZYDIS_MNEMONIC_JBE, &CPU::emulate_jbe},
-        {ZYDIS_MNEMONIC_POPFQ, &CPU::emulate_popfq},
-        {ZYDIS_MNEMONIC_PUSHFQ, &CPU::emulate_pushfq},
-        {ZYDIS_MNEMONIC_CMOVZ, &CPU::emulate_cmovz},
-        {ZYDIS_MNEMONIC_INC, &CPU::emulate_inc},
-        {ZYDIS_MNEMONIC_DIV, &CPU::emulate_div},
-        {ZYDIS_MNEMONIC_MOVQ, &CPU::emulate_movq},
-        {ZYDIS_MNEMONIC_JNBE, &CPU::emulate_jnbe},
-        {ZYDIS_MNEMONIC_RDRAND, &CPU::emulate_rdrand},
-        {ZYDIS_MNEMONIC_PUNPCKLDQ, &CPU::emulate_punpckldq}, 
-        {ZYDIS_MNEMONIC_PUNPCKLQDQ, &CPU::emulate_punpcklqdq},
-        {ZYDIS_MNEMONIC_MOVDQA, &CPU::emulate_movdqa},
-        {ZYDIS_MNEMONIC_VINSERTF128, &CPU::emulate_vinsertf128},
-        {ZYDIS_MNEMONIC_VMOVDQU, &CPU::emulate_vmovdqu},
-        {ZYDIS_MNEMONIC_VZEROUPPER, &CPU::emulate_vzeroupper},
-        {ZYDIS_MNEMONIC_MOVUPS, &CPU::emulate_movups},
-        {ZYDIS_MNEMONIC_MOVDQU, &CPU::emulate_movdqu},
-        {ZYDIS_MNEMONIC_XORPS, &CPU::emulate_xorps},
-        {ZYDIS_MNEMONIC_STOSW, &CPU::emulate_stosw},
-        {ZYDIS_MNEMONIC_SBB, &CPU::emulate_sbb},
-        {ZYDIS_MNEMONIC_CMOVB, &CPU::emulate_cmovb},
-        {ZYDIS_MNEMONIC_VMOVDQA, &CPU::emulate_vmovdqa},
-        {ZYDIS_MNEMONIC_SETBE, &CPU::emulate_setbe},
-        {ZYDIS_MNEMONIC_CMOVNZ, &CPU::emulate_cmovnz},
-        {ZYDIS_MNEMONIC_XADD, &CPU::emulate_xadd},
-        {ZYDIS_MNEMONIC_CMOVNBE, &CPU::emulate_cmovnbe},
-        {ZYDIS_MNEMONIC_STOSQ, &CPU::emulate_stosq},
-        {ZYDIS_MNEMONIC_CDQE, &CPU::emulate_cdqe},
-        {ZYDIS_MNEMONIC_MOVSX, &CPU::emulate_movsx},
-        {ZYDIS_MNEMONIC_RCR, &CPU::emulate_rcr},
-        {ZYDIS_MNEMONIC_CLC, &CPU::emulate_clc},
-        {ZYDIS_MNEMONIC_ADC, &CPU::emulate_adc},
-        {ZYDIS_MNEMONIC_STC, &CPU::emulate_stc},
-        {ZYDIS_MNEMONIC_STOSD, &CPU::emulate_stosd},
-        {ZYDIS_MNEMONIC_STOSB, &CPU::emulate_stosb},
-        {ZYDIS_MNEMONIC_MOVAPS, &CPU::emulate_movaps},
-        {ZYDIS_MNEMONIC_JNLE, &CPU::emulate_jnle},
-        {ZYDIS_MNEMONIC_JNL, &CPU::emulate_jnl},
-        {ZYDIS_MNEMONIC_JS, &CPU::emulate_js},
-        {ZYDIS_MNEMONIC_JNS, &CPU::emulate_jns},
-        {ZYDIS_MNEMONIC_CMOVS, &CPU::emulate_cmovs},
-        {ZYDIS_MNEMONIC_CMOVNL, &CPU::emulate_cmovnl},
-        {ZYDIS_MNEMONIC_CMOVBE, &CPU::emulate_cmovbe},
-        {ZYDIS_MNEMONIC_SETB, &CPU::emulate_setb},
-        {ZYDIS_MNEMONIC_SETNBE, &CPU::emulate_setnbe},
-        {ZYDIS_MNEMONIC_CMOVNB, &CPU::emulate_cmovnb},
-        {ZYDIS_MNEMONIC_CMOVL, &CPU::emulate_cmovl},
-        {ZYDIS_MNEMONIC_MOVSD, &CPU::emulate_movsd},
-        {ZYDIS_MNEMONIC_PSRLDQ, &CPU::emulate_psrldq},
-        {ZYDIS_MNEMONIC_MOVD, &CPU::emulate_movd},
-        {ZYDIS_MNEMONIC_RCL, &CPU::emulate_rcl},
-        {ZYDIS_MNEMONIC_SHLD, &CPU::emulate_shld},
-        {ZYDIS_MNEMONIC_SHRD, &CPU::emulate_shrd},
-        {ZYDIS_MNEMONIC_CMOVNS, &CPU::emulate_cmovns},
-        {ZYDIS_MNEMONIC_MOVSB, &CPU::emulate_movsb},
-        {ZYDIS_MNEMONIC_MOVLHPS, &CPU::emulate_movlhps},
-        {ZYDIS_MNEMONIC_VMOVUPS, &CPU::emulate_vmovups},
-        {ZYDIS_MNEMONIC_VMOVAPS, &CPU::emulate_vmovaps},
-        {ZYDIS_MNEMONIC_SETNB, &CPU::emulate_setnb},
-        {ZYDIS_MNEMONIC_SCASD, &CPU::emulate_scasd},
-        {ZYDIS_MNEMONIC_BSR, &CPU::emulate_bsr},
-        {ZYDIS_MNEMONIC_PUNPCKLBW, &CPU::emulate_punpcklbw},
-        {ZYDIS_MNEMONIC_PUNPCKLWD, &CPU::emulate_punpcklwd},
-        {ZYDIS_MNEMONIC_CMOVO, &CPU::emulate_cmovo},
-        {ZYDIS_MNEMONIC_BSWAP, &CPU::emulate_bswap},
-        {ZYDIS_MNEMONIC_CMOVP, &CPU::emulate_cmovp},
-        {ZYDIS_MNEMONIC_CMOVNP, &CPU::emulate_cmovnp},
-        {ZYDIS_MNEMONIC_JNP, &CPU::emulate_jnp},
-        {ZYDIS_MNEMONIC_SETNS, &CPU::emulate_setns},
-        {ZYDIS_MNEMONIC_CMOVNO, &CPU::emulate_cmovno},
-        {ZYDIS_MNEMONIC_JP, &CPU::emulate_jp},
-        {ZYDIS_MNEMONIC_CMOVLE, &CPU::emulate_cmovle},
-        {ZYDIS_MNEMONIC_PREFETCHW, &CPU::emulate_prefetchw},
-        {ZYDIS_MNEMONIC_PREFETCH, &CPU::emulate_prefetchw},
-        {ZYDIS_MNEMONIC_PREFETCHIT0, &CPU::emulate_prefetchw},
-        {ZYDIS_MNEMONIC_PREFETCHIT1, &CPU::emulate_prefetchw},
-        {ZYDIS_MNEMONIC_PREFETCHNTA, &CPU::emulate_prefetchw},
-        {ZYDIS_MNEMONIC_PREFETCHT0, &CPU::emulate_prefetchw},
-        {ZYDIS_MNEMONIC_PREFETCHT1, &CPU::emulate_prefetchw},
-        {ZYDIS_MNEMONIC_PREFETCHT2, &CPU::emulate_prefetchw},
-        {ZYDIS_MNEMONIC_PREFETCHWT1, &CPU::emulate_prefetchw},
-        {ZYDIS_MNEMONIC_BTS, &CPU::emulate_bts},
-        {ZYDIS_MNEMONIC_SETP, &CPU::emulate_setp},
-        {ZYDIS_MNEMONIC_SETNLE, &CPU::emulate_setnle},
-        {ZYDIS_MNEMONIC_JNO, &CPU::emulate_jno},
-        {ZYDIS_MNEMONIC_SETL, &CPU::emulate_setl},
-        {ZYDIS_MNEMONIC_JO, &CPU::emulate_jo},
-        {ZYDIS_MNEMONIC_CMOVNLE, &CPU::emulate_cmovnle},
-        {ZYDIS_MNEMONIC_SETNP, &CPU::emulate_setnp},
-        {ZYDIS_MNEMONIC_SETNL, &CPU::emulate_setnl},
-        {ZYDIS_MNEMONIC_SETS, &CPU::emulate_sets},
-        {ZYDIS_MNEMONIC_SETNO, &CPU::emulate_setno},
-        {ZYDIS_MNEMONIC_SETLE, &CPU::emulate_setle},
-        {ZYDIS_MNEMONIC_SETO, &CPU::emulate_seto},
-        {ZYDIS_MNEMONIC_MOVSS, &CPU::emulate_movss},
-        {ZYDIS_MNEMONIC_MOVSQ, &CPU::emulate_movsq},
-        {ZYDIS_MNEMONIC_RDTSC, &CPU::emulate_rdtsc},
-        {ZYDIS_MNEMONIC_MULSS, &CPU::emulate_mulss},
-        {ZYDIS_MNEMONIC_COMISS, &CPU::emulate_comiss},
-        {ZYDIS_MNEMONIC_CVTTSS2SI, &CPU::emulate_cvttss2si},
-        {ZYDIS_MNEMONIC_CVTSI2SS, &CPU::emulate_cvtsi2ss},
-        {ZYDIS_MNEMONIC_CVTSS2SI, &CPU::emulate_cvtss2si}, 
-        {ZYDIS_MNEMONIC_TZCNT, &CPU::emulate_tzcnt},
-        {ZYDIS_MNEMONIC_RCPSS, &CPU::emulate_rcpss},
-        {ZYDIS_MNEMONIC_DIVSS, &CPU::emulate_divss},
-        {ZYDIS_MNEMONIC_CVTSS2SD, &CPU::emulate_cvtss2sd},
-        {ZYDIS_MNEMONIC_ANDPS, &CPU::emulate_andps},
-        {ZYDIS_MNEMONIC_CVTDQ2PS, &CPU::emulate_cvtdq2ps},
-        {ZYDIS_MNEMONIC_ADDSS, &CPU::emulate_addss},
-        {ZYDIS_MNEMONIC_CDQ, &CPU::emulate_cdq},
-        {ZYDIS_MNEMONIC_CQO, &CPU::emulate_cqo},
-        {ZYDIS_MNEMONIC_CVTSI2SD, &CPU::emulate_cvtsi2sd},
-        {ZYDIS_MNEMONIC_DIVSD, &CPU::emulate_divsd},
-        {ZYDIS_MNEMONIC_MULSD, &CPU::emulate_mulsd},
-        {ZYDIS_MNEMONIC_SUBSS, &CPU::emulate_subss},
-        {ZYDIS_MNEMONIC_ADDSD, &CPU::emulate_addsd},
-        {ZYDIS_MNEMONIC_SUBSD, &CPU::emulate_subsd},
-        {ZYDIS_MNEMONIC_SQRTPD, &CPU::emulate_sqrtpd},
-        {ZYDIS_MNEMONIC_IDIV, &CPU::emulate_idiv},
-        {ZYDIS_MNEMONIC_LFENCE, &CPU::emulate_lfence},
-        {ZYDIS_MNEMONIC_MFENCE, &CPU::emulate_mfence},
-        {ZYDIS_MNEMONIC_VPXOR, &CPU::emulate_vpxor},
-        {ZYDIS_MNEMONIC_VPCMPEQW, &CPU::emulate_vpcmpeqw},
-        {ZYDIS_MNEMONIC_VPMOVMSKB, &CPU::emulate_vpmovmskb},
-        {ZYDIS_MNEMONIC_PCMPISTRI, &CPU::emulate_pcmpistri},
-        {ZYDIS_MNEMONIC_BSF, &CPU::emulate_bsf},
-        {ZYDIS_MNEMONIC_CMPXCHG16B, &CPU::emulate_cmpxchg16b},
-        {ZYDIS_MNEMONIC_UNPCKHPD, &CPU::emulate_unpckhpd},
-        {ZYDIS_MNEMONIC_BTC, &CPU::emulate_btc},
-        {ZYDIS_MNEMONIC_VPCMPEQB, &CPU::emulate_vpcmpeqb},
-        {ZYDIS_MNEMONIC_PSHUFLW, &CPU::emulate_pshuflw}, 
-        {ZYDIS_MNEMONIC_PSHUFHW, &CPU::emulate_pshufhw}, 
-        {ZYDIS_MNEMONIC_PCMPEQB, &CPU::emulate_pcmpeqb},
-        {ZYDIS_MNEMONIC_PCMPEQW, &CPU::emulate_pcmpeqw}, 
-        {ZYDIS_MNEMONIC_PCMPEQD, &CPU::emulate_pcmpeqd}, 
-        {ZYDIS_MNEMONIC_PSHUFD, &CPU::emulate_pshufd},
-        {ZYDIS_MNEMONIC_POR, &CPU::emulate_por},
-        {ZYDIS_MNEMONIC_PMOVMSKB, &CPU::emulate_pmovmskb},
-        {ZYDIS_MNEMONIC_PAUSE, &CPU::emulate_pause},
-        {ZYDIS_MNEMONIC_SHUFPS, &CPU::emulate_shufps},
-        {ZYDIS_MNEMONIC_UNPCKLPS, &CPU::emulate_unpcklps},
-        {ZYDIS_MNEMONIC_SQRTSS, &CPU::emulate_sqrtss},
-        {ZYDIS_MNEMONIC_RSQRTPS, &CPU::emulate_rsqrtps},
-        {ZYDIS_MNEMONIC_DIVPS, &CPU::emulate_divps},
-        {ZYDIS_MNEMONIC_CVTPS2PD, &CPU::emulate_cvtps2pd},
-        {ZYDIS_MNEMONIC_CVTPD2PS, &CPU::emulate_cvtpd2ps},
-        {ZYDIS_MNEMONIC_PCMPEQW, &CPU::emulate_pcmpeqw},
-        {ZYDIS_MNEMONIC_VMOVNTDQ, &CPU::emulate_vmovntdq},
-        {ZYDIS_MNEMONIC_SFENCE, &CPU::emulate_sfence},
-        {ZYDIS_MNEMONIC_MOVHPD, &CPU::emulate_movhpd},
-        {ZYDIS_MNEMONIC_PADDQ, &CPU::emulate_paddq},
-        {ZYDIS_MNEMONIC_CVTTSD2SI, &CPU::emulate_cvttsd2si},
-        {ZYDIS_MNEMONIC_STMXCSR, &CPU::emulate_stmxcsr},
-        {ZYDIS_MNEMONIC_FNSTCW, &CPU::emulate_fnstcw},
-        {ZYDIS_MNEMONIC_UCOMISS, &CPU::emulate_ucomiss},
-        {ZYDIS_MNEMONIC_ROUNDSS, &CPU::emulate_roundss},
-        {ZYDIS_MNEMONIC_LEAVE, &CPU::emulate_leave},
-        {ZYDIS_MNEMONIC_PUSHF, &CPU::emulate_pushf},
-        {ZYDIS_MNEMONIC_PUSHFD, &CPU::emulate_pushfd},
-        {ZYDIS_MNEMONIC_VMOVD, &CPU::emulate_vmovd},
-        {ZYDIS_MNEMONIC_ORPS, &CPU::emulate_orps},
-        {ZYDIS_MNEMONIC_SCASB, &CPU::emulate_scasb},
-        {ZYDIS_MNEMONIC_CMC, &CPU::emulate_cmc},
-        {ZYDIS_MNEMONIC_LAHF, &CPU::emulate_lahf},
-        {ZYDIS_MNEMONIC_CBW, &CPU::emulate_cbw},
-        {ZYDIS_MNEMONIC_CWDE, &CPU::emulate_cwde},
-        {ZYDIS_MNEMONIC_LODSB, &CPU::emulate_lodsb},
-        {ZYDIS_MNEMONIC_LODSW, &CPU::emulate_lodsw},
-        {ZYDIS_MNEMONIC_LODSD, &CPU::emulate_lodsd},
-        {ZYDIS_MNEMONIC_LODSQ, &CPU::emulate_lodsq},
-        {ZYDIS_MNEMONIC_VPSHUFB, &CPU::emulate_vpshufb},
-        {ZYDIS_MNEMONIC_LZCNT, &CPU::emulate_lzcnt},
-        {ZYDIS_MNEMONIC_VPMASKMOVD, &CPU::emulate_vpmaskmovd},
-        {ZYDIS_MNEMONIC_PAND, &CPU::emulate_pand}, 
-        {ZYDIS_MNEMONIC_PANDN, &CPU::emulate_pandn}, 
-        {ZYDIS_MNEMONIC_VPAND, &CPU::emulate_vpand},
-        {ZYDIS_MNEMONIC_PSHUFB, &CPU::emulate_pshufb},
-        {ZYDIS_MNEMONIC_FXSAVE, &CPU::emulate_fxsave},
-        {ZYDIS_MNEMONIC_FXRSTOR, &CPU::emulate_fxrstor},
-        {ZYDIS_MNEMONIC_SGDT, &CPU::emulate_sgdt},
-        {ZYDIS_MNEMONIC_SAHF, &CPU::emulate_sahf},
-        {ZYDIS_MNEMONIC_XLAT, &CPU::emulate_xlatb},
-        {ZYDIS_MNEMONIC_VPADDQ, &CPU::emulate_vpaddq},
-        {ZYDIS_MNEMONIC_VPSUBQ, &CPU::emulate_vpsubq},
-        {ZYDIS_MNEMONIC_VPOR, &CPU::emulate_vpor},
-        {ZYDIS_MNEMONIC_VPMULUDQ, &CPU::emulate_vpmuludq},
-        {ZYDIS_MNEMONIC_VPCMPEQQ, &CPU::emulate_vpcmpeqq},
-        {ZYDIS_MNEMONIC_PSLLW, &CPU::emulate_psllw}, 
-        {ZYDIS_MNEMONIC_PSLLD, &CPU::emulate_pslld}, 
-        {ZYDIS_MNEMONIC_PSLLQ, &CPU::emulate_psllq}, 
-        {ZYDIS_MNEMONIC_VPSLLQ, &CPU::emulate_vpsllq}, 
-        {ZYDIS_MNEMONIC_VPANDN, &CPU::emulate_vpandn},
-        {ZYDIS_MNEMONIC_VPSLLVQ, &CPU::emulate_vpsllvq},
-        {ZYDIS_MNEMONIC_VPCMPGTQ, &CPU::emulate_vpcmpgtq},
-        {ZYDIS_MNEMONIC_VPBLENDVB, &CPU::emulate_vpblendvb},
-        {ZYDIS_MNEMONIC_VPERMQ, &CPU::emulate_vpermq},
-        {ZYDIS_MNEMONIC_VPSHUFD, &CPU::emulate_vpshufd},
-        {ZYDIS_MNEMONIC_VPUNPCKLQDQ, &CPU::emulate_vpunpcklqdq},
-        {ZYDIS_MNEMONIC_VPUNPCKHQDQ, &CPU::emulate_vpunpckhqdq},
-        {ZYDIS_MNEMONIC_PACKUSWB, &CPU::emulate_packuswb}, 
-        {ZYDIS_MNEMONIC_VPACKUSWB, &CPU::emulate_vpackuswb}, 
-        {ZYDIS_MNEMONIC_PACKUSDW, &CPU::emulate_packusdw}, 
-        {ZYDIS_MNEMONIC_VPACKUSDW, &CPU::emulate_vpackusdw},
-        {ZYDIS_MNEMONIC_VPMADDWD, &CPU::emulate_vpmaddwd},
-        {ZYDIS_MNEMONIC_VPSADBW, &CPU::emulate_vpsadbw},
-        {ZYDIS_MNEMONIC_VPALIGNR, &CPU::emulate_vpalignr},
-        {ZYDIS_MNEMONIC_VPGATHERDD, &CPU::emulate_vpgatherdd},
-        {ZYDIS_MNEMONIC_VCVTDQ2PS, &CPU::emulate_vcvtdq2ps},
-        {ZYDIS_MNEMONIC_VMULPS, &CPU::emulate_vmulps},
-        {ZYDIS_MNEMONIC_VADDPS, &CPU::emulate_vaddps},
-        {ZYDIS_MNEMONIC_VCVTPS2DQ, &CPU::emulate_vcvtps2dq},
-        {ZYDIS_MNEMONIC_VHADDPS, &CPU::emulate_vhaddps},
-        {ZYDIS_MNEMONIC_VPERMD, &CPU::emulate_vpermd},
-        {ZYDIS_MNEMONIC_VPMULLW, &CPU::emulate_vpmullw},
-        {ZYDIS_MNEMONIC_VPMULHW, &CPU::emulate_vpmulhw},
-        {ZYDIS_MNEMONIC_VPTEST, &CPU::emulate_vptest},
-        {ZYDIS_MNEMONIC_VPMOVSXWD, &CPU::emulate_vpmovsxwd},
-        {ZYDIS_MNEMONIC_VPADDD, &CPU::emulate_vpaddd},
-        {ZYDIS_MNEMONIC_PADDD, &CPU::emulate_paddd},
-        {ZYDIS_MNEMONIC_PADDW, &CPU::emulate_paddw},
-        {ZYDIS_MNEMONIC_PADDB, &CPU::emulate_paddb},
-        {ZYDIS_MNEMONIC_PMOVZXDQ, &CPU::emulate_pmovzxdq},
-        {ZYDIS_MNEMONIC_PSUBB, &CPU::emulate_psubb},
-        {ZYDIS_MNEMONIC_PSUBW, &CPU::emulate_psubw},
-        {ZYDIS_MNEMONIC_PSUBD, &CPU::emulate_psubd}, 
-        {ZYDIS_MNEMONIC_PSUBQ, &CPU::emulate_psubq},
-        {ZYDIS_MNEMONIC_VPMOVZXBW, &CPU::emulate_vpmovzxbw},
-        {ZYDIS_MNEMONIC_PMOVZXWD, &CPU::emulate_pmovzxwd},
-        {ZYDIS_MNEMONIC_VBLENDPS, &CPU::emulate_vblendps},
-        {ZYDIS_MNEMONIC_VFMADD213PS, &CPU::emulate_vfmadd213ps},
-        {ZYDIS_MNEMONIC_PXOR, &CPU::emulate_pxor},
-        {ZYDIS_MNEMONIC_PMOVSXBW, &CPU::emulate_pmovsxbw}, 
-        {ZYDIS_MNEMONIC_PMOVSXBD, &CPU::emulate_pmovsxbd}, 
-        {ZYDIS_MNEMONIC_PMOVSXBQ, &CPU::emulate_pmovsxbq}, 
-        {ZYDIS_MNEMONIC_PMOVSXWD, &CPU::emulate_pmovsxwd},
-        {ZYDIS_MNEMONIC_PMOVSXWQ, &CPU::emulate_pmovsxwq},
-        {ZYDIS_MNEMONIC_PMOVSXDQ, &CPU::emulate_pmovsxdq}, 
-        {ZYDIS_MNEMONIC_KMOVB, &CPU::emulate_kmovb},
-        {ZYDIS_MNEMONIC_KMOVW, &CPU::emulate_kmovw},
-        {ZYDIS_MNEMONIC_KMOVD, &CPU::emulate_kmovd},
-        {ZYDIS_MNEMONIC_KMOVQ, &CPU::emulate_kmovq},
-        {ZYDIS_MNEMONIC_ROUNDPS, &CPU::emulate_roundps},
-        {ZYDIS_MNEMONIC_VROUNDPS, &CPU::emulate_vroundps},
-        {ZYDIS_MNEMONIC_VPERMILPS, &CPU::emulate_vpermilps},
-        {ZYDIS_MNEMONIC_VMOVAPD, &CPU::emulate_vmovapd},
-        {ZYDIS_MNEMONIC_VMOVUPD, &CPU::emulate_vmovupd},
-        {ZYDIS_MNEMONIC_VEXTRACTF128, &CPU::emulate_vextractf128},
-        {ZYDIS_MNEMONIC_VBROADCASTSS, &CPU::emulate_vbroadcastss},
-        {ZYDIS_MNEMONIC_VBROADCASTSD, &CPU::emulate_vbroadcastsd},
-        {ZYDIS_MNEMONIC_VBROADCASTF128, &CPU::emulate_vbroadcastf128},
-        {ZYDIS_MNEMONIC_PMINUB, &CPU::emulate_pminub},
-        {ZYDIS_MNEMONIC_PMINUW, &CPU::emulate_pminuw},
-        {ZYDIS_MNEMONIC_VPMINUB, &CPU::emulate_vpminub},
-        {ZYDIS_MNEMONIC_VPMINUW, &CPU::emulate_vpminuw},
-        {ZYDIS_MNEMONIC_VPADDW, &CPU::emulate_vpaddw},
-        {ZYDIS_MNEMONIC_VTESTPS, &CPU::emulate_vtestps},
-        {ZYDIS_MNEMONIC_VTESTPD, &CPU::emulate_vtestpd},
-        {ZYDIS_MNEMONIC_VPERMILPD, &CPU::emulate_vpermilpd},
-        {ZYDIS_MNEMONIC_VPERM2F128, &CPU::emulate_vperm2f128},
-        {ZYDIS_MNEMONIC_VPERM2I128, &CPU::emulate_vperm2i128},
-        {ZYDIS_MNEMONIC_VINSERTI128, &CPU::emulate_vinserti128},
-        {ZYDIS_MNEMONIC_VEXTRACTI128, &CPU::emulate_vextracti128},
-        {ZYDIS_MNEMONIC_CLD, &CPU::emulate_cld},
-        {ZYDIS_MNEMONIC_CVTSD2SS, &CPU::emulate_cvtsd2ss},
-        {ZYDIS_MNEMONIC_COMISD, &CPU::emulate_comisd},
-        {ZYDIS_MNEMONIC_SYSCALL, &CPU::emulate_syscall},
-        {ZYDIS_MNEMONIC_LSL, &CPU::emulate_lsl},
-        {ZYDIS_MNEMONIC_MULPS, &CPU::emulate_mulps},
-        {ZYDIS_MNEMONIC_VSUBPS, &CPU::emulate_vsubps},
-        {ZYDIS_MNEMONIC_SUBPS, &CPU::emulate_subps},
-        {ZYDIS_MNEMONIC_ANDNPS, &CPU::emulate_andnps},
-        {ZYDIS_MNEMONIC_VANDNPS, &CPU::emulate_vandnps},
-        {ZYDIS_MNEMONIC_ADDPS, &CPU::emulate_addps},
-        {ZYDIS_MNEMONIC_MOVHLPS, &CPU::emulate_movhlps},
-        {ZYDIS_MNEMONIC_UNPCKLPD, &CPU::emulate_unpcklpd},
-        {ZYDIS_MNEMONIC_VUNPCKLPD, &CPU::emulate_vunpcklpd},
-        {ZYDIS_MNEMONIC_PMAXUB, &CPU::emulate_pmaxub},
-        {ZYDIS_MNEMONIC_VPMAXUB, &CPU::emulate_vpmaxub},
-        {ZYDIS_MNEMONIC_PMAXSB, &CPU::emulate_pmaxsb},
-        {ZYDIS_MNEMONIC_PMAXSW, &CPU::emulate_pmaxsw},
-        {ZYDIS_MNEMONIC_PMAXSD, &CPU::emulate_pmaxsd},
-        {ZYDIS_MNEMONIC_VPMAXSB, &CPU::emulate_vpmaxsb},
-        {ZYDIS_MNEMONIC_VPMAXSW, &CPU::emulate_vpmaxsw},
-        {ZYDIS_MNEMONIC_VPMAXSD, &CPU::emulate_vpmaxsd},
-        {ZYDIS_MNEMONIC_PMAXUD, &CPU::emulate_pmaxud},
-        {ZYDIS_MNEMONIC_VPMAXUD, &CPU::emulate_vpmaxud},
-        {ZYDIS_MNEMONIC_PMADDUBSW, &CPU::emulate_pmaddubsw},
-        {ZYDIS_MNEMONIC_VPMADDUBSW, &CPU::emulate_vpmaddubsw},
-        {ZYDIS_MNEMONIC_PMULHRSW, &CPU::emulate_pmulhrsw},
-        {ZYDIS_MNEMONIC_VPMULHRSW, &CPU::emulate_vpmulhrsw},
-        {ZYDIS_MNEMONIC_PSIGNB, &CPU::emulate_psignb},
-        {ZYDIS_MNEMONIC_PSIGNW, &CPU::emulate_psignw},
-        {ZYDIS_MNEMONIC_PSIGND, &CPU::emulate_psignd},
-        {ZYDIS_MNEMONIC_VPSIGNB, &CPU::emulate_vpsignb},
-        {ZYDIS_MNEMONIC_VPSIGNW, &CPU::emulate_vpsignw},
-        {ZYDIS_MNEMONIC_VPSIGND, &CPU::emulate_vpsignd},
-        {ZYDIS_MNEMONIC_VPBLENDD, &CPU::emulate_vpblendd},
-        {ZYDIS_MNEMONIC_PMINSB, &CPU::emulate_pminsb},
-        {ZYDIS_MNEMONIC_VPMINSB, &CPU::emulate_vpminsb},
-        {ZYDIS_MNEMONIC_PMINSD, &CPU::emulate_pminsd},
-        {ZYDIS_MNEMONIC_VPMINSD, &CPU::emulate_vpminsd},
-        {ZYDIS_MNEMONIC_PMAXUW, &CPU::emulate_pmaxuw},
-        {ZYDIS_MNEMONIC_VPMAXUW, &CPU::emulate_vpmaxuw},
-        {ZYDIS_MNEMONIC_PMINSW, &CPU::emulate_pminsw},
-        {ZYDIS_MNEMONIC_VPMINSW, &CPU::emulate_vpminsw},
-        {ZYDIS_MNEMONIC_PMINUD, &CPU::emulate_pminud},
-        {ZYDIS_MNEMONIC_VPMINUD, &CPU::emulate_vpminud},
-        {ZYDIS_MNEMONIC_PHADDW, &CPU::emulate_phaddw},
-        {ZYDIS_MNEMONIC_VPHADDW, &CPU::emulate_vphaddw},
-        {ZYDIS_MNEMONIC_PHADDD, &CPU::emulate_phaddd},
-        {ZYDIS_MNEMONIC_VPHADDD, &CPU::emulate_vphaddd},
-        {ZYDIS_MNEMONIC_PHADDSW, &CPU::emulate_phaddsw},
-        {ZYDIS_MNEMONIC_VPHADDSW, &CPU::emulate_vphaddsw},
-        {ZYDIS_MNEMONIC_PHSUBW, &CPU::emulate_phsubw},
-        {ZYDIS_MNEMONIC_VPHSUBW, &CPU::emulate_vphsubw},
-        {ZYDIS_MNEMONIC_PHSUBD, &CPU::emulate_phsubd},
-        {ZYDIS_MNEMONIC_VPHSUBD, &CPU::emulate_vphsubd},
-        {ZYDIS_MNEMONIC_VPGATHERDQ, &CPU::emulate_vpgatherdq},
-        {ZYDIS_MNEMONIC_VPGATHERQQ, &CPU::emulate_vpgatherqq},
-        {ZYDIS_MNEMONIC_VGATHERDPD, &CPU::emulate_vgatherdpd},
-        {ZYDIS_MNEMONIC_VGATHERQPD, &CPU::emulate_vgatherqpd},
-        {ZYDIS_MNEMONIC_VGATHERDPS, &CPU::emulate_vgatherdps},
-        {ZYDIS_MNEMONIC_VGATHERQPS, &CPU::emulate_vgatherqps},
-        {ZYDIS_MNEMONIC_PEXTRQ, &CPU::emulate_pextrq},
-        {ZYDIS_MNEMONIC_VPEXTRQ, &CPU::emulate_vpextrq},
-        {ZYDIS_MNEMONIC_VPBROADCASTB, &CPU::emulate_vpbroadcastb},
-        {ZYDIS_MNEMONIC_VPBROADCASTW, &CPU::emulate_vpbroadcastw},
-        {ZYDIS_MNEMONIC_VPBROADCASTD, &CPU::emulate_vpbroadcastd},
-        {ZYDIS_MNEMONIC_VPBROADCASTQ, &CPU::emulate_vpbroadcastq},
-        {ZYDIS_MNEMONIC_PSRLD, &CPU::emulate_psrld},
-        {ZYDIS_MNEMONIC_PSRLQ, &CPU::emulate_psrlq},
-        {ZYDIS_MNEMONIC_VPSRLW, &CPU::emulate_vpsrlw},
-        {ZYDIS_MNEMONIC_VPSRLD, &CPU::emulate_vpsrld},
-        {ZYDIS_MNEMONIC_VPSRLQ, &CPU::emulate_vpsrlq},
-        {ZYDIS_MNEMONIC_BLENDVPD, &CPU::emulate_blendvpd},
-        {ZYDIS_MNEMONIC_VBLENDVPD, &CPU::emulate_vblendvpd},
-        {ZYDIS_MNEMONIC_BLENDPS, &CPU::emulate_blendps},
-        {ZYDIS_MNEMONIC_SHUFPD, &CPU::emulate_shufpd},
-        {ZYDIS_MNEMONIC_VSHUFPD, &CPU::emulate_vshufpd},
-        {ZYDIS_MNEMONIC_UNPCKHPS, &CPU::emulate_unpckhps},
-        {ZYDIS_MNEMONIC_VUNPCKHPS, &CPU::emulate_vunpckhps},
-        {ZYDIS_MNEMONIC_VUNPCKHPD, &CPU::emulate_vunpckhpd},
-        {ZYDIS_MNEMONIC_VUNPCKLPS, &CPU::emulate_vunpcklps},
-        {ZYDIS_MNEMONIC_VFMADD213PD, &CPU::emulate_vfmadd213pd},
-        {ZYDIS_MNEMONIC_ROUNDSD, &CPU::emulate_roundsd},
-        {ZYDIS_MNEMONIC_VRSQRTPS, &CPU::emulate_vrsqrtps},
-        {ZYDIS_MNEMONIC_SQRTPS, &CPU::emulate_sqrtps},
-        {ZYDIS_MNEMONIC_VSQRTPS, &CPU::emulate_vsqrtps},
-        {ZYDIS_MNEMONIC_SQRTSD, &CPU::emulate_sqrtsd},
-        {ZYDIS_MNEMONIC_VFMSUB213PS, &CPU::emulate_vfmsub213ps},
-        {ZYDIS_MNEMONIC_VFNMSUB213PD, &CPU::emulate_vfnmsub213pd},
-        {ZYDIS_MNEMONIC_VFMSUB213PD, &CPU::emulate_vfmsub213pd},
-        {ZYDIS_MNEMONIC_CWD, &CPU::emulate_cwd},
+      dispatch_table[ZYDIS_MNEMONIC_MOV] = &CPU::emulate_mov;
+      dispatch_table[ZYDIS_MNEMONIC_ADD] = &CPU::emulate_add;
+      dispatch_table[ZYDIS_MNEMONIC_SUB] = &CPU::emulate_sub;
+      dispatch_table[ZYDIS_MNEMONIC_XOR] = &CPU::emulate_xor;
+      dispatch_table[ZYDIS_MNEMONIC_AND] = &CPU::emulate_and;
+      dispatch_table[ZYDIS_MNEMONIC_OR] = &CPU::emulate_or;
+      dispatch_table[ZYDIS_MNEMONIC_CMP] = &CPU::emulate_cmp;
+      dispatch_table[ZYDIS_MNEMONIC_TEST] = &CPU::emulate_test;
+      dispatch_table[ZYDIS_MNEMONIC_SHL] = &CPU::emulate_shl;
+      dispatch_table[ZYDIS_MNEMONIC_SHR] = &CPU::emulate_shr;
+      dispatch_table[ZYDIS_MNEMONIC_SAR] = &CPU::emulate_sar;
+      dispatch_table[ZYDIS_MNEMONIC_ROL] = &CPU::emulate_rol;
+      dispatch_table[ZYDIS_MNEMONIC_ROR] = &CPU::emulate_ror;
+      dispatch_table[ZYDIS_MNEMONIC_JZ] = &CPU::emulate_jz;
+      dispatch_table[ZYDIS_MNEMONIC_JNZ] = &CPU::emulate_jnz;
+      dispatch_table[ZYDIS_MNEMONIC_NOP] = &CPU::emulate_nop;
+      dispatch_table[ZYDIS_MNEMONIC_PUSH] = &CPU::emulate_push;
+      dispatch_table[ZYDIS_MNEMONIC_POP] = &CPU::emulate_pop;
+      dispatch_table[ZYDIS_MNEMONIC_CALL] = &CPU::emulate_call;
+      dispatch_table[ZYDIS_MNEMONIC_RET] = &CPU::emulate_ret;
+      dispatch_table[ZYDIS_MNEMONIC_JMP] = &CPU::emulate_jmp;
+      dispatch_table[ZYDIS_MNEMONIC_LEA] = &CPU::emulate_lea;
+      dispatch_table[ZYDIS_MNEMONIC_CPUID] = &CPU::emulate_cpuid;
+      dispatch_table[ZYDIS_MNEMONIC_NOT] = &CPU::emulate_not;
+      dispatch_table[ZYDIS_MNEMONIC_NEG] = &CPU::emulate_neg;
+      dispatch_table[ZYDIS_MNEMONIC_XCHG] = &CPU::emulate_xchg;
+      dispatch_table[ZYDIS_MNEMONIC_MUL] = &CPU::emulate_mul;
+      dispatch_table[ZYDIS_MNEMONIC_IMUL] = &CPU::emulate_imul;
+      dispatch_table[ZYDIS_MNEMONIC_SETNZ] = &CPU::emulate_setnz;
+      dispatch_table[ZYDIS_MNEMONIC_SETZ] = &CPU::emulate_setz;
+      dispatch_table[ZYDIS_MNEMONIC_BT] = &CPU::emulate_bt;
+      dispatch_table[ZYDIS_MNEMONIC_BTR] = &CPU::emulate_btr;
+      dispatch_table[ZYDIS_MNEMONIC_JNB] = &CPU::emulate_jnb;
+      dispatch_table[ZYDIS_MNEMONIC_XGETBV] = &CPU::emulate_xgetbv;
+      dispatch_table[ZYDIS_MNEMONIC_JL] = &CPU::emulate_jl;
+      dispatch_table[ZYDIS_MNEMONIC_CMPXCHG] = &CPU::emulate_cmpxchg;
+      dispatch_table[ZYDIS_MNEMONIC_JLE] = &CPU::emulate_jle;
+      dispatch_table[ZYDIS_MNEMONIC_MOVSXD] = &CPU::emulate_movsxd;
+      dispatch_table[ZYDIS_MNEMONIC_MOVZX] = &CPU::emulate_movzx;
+      dispatch_table[ZYDIS_MNEMONIC_DEC] = &CPU::emulate_dec;
+      dispatch_table[ZYDIS_MNEMONIC_JB] = &CPU::emulate_jb;
+      dispatch_table[ZYDIS_MNEMONIC_JBE] = &CPU::emulate_jbe;
+      dispatch_table[ZYDIS_MNEMONIC_POPFQ] = &CPU::emulate_popfq;
+      dispatch_table[ZYDIS_MNEMONIC_PUSHFQ] = &CPU::emulate_pushfq;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVZ] = &CPU::emulate_cmovz;
+      dispatch_table[ZYDIS_MNEMONIC_INC] = &CPU::emulate_inc;
+      dispatch_table[ZYDIS_MNEMONIC_DIV] = &CPU::emulate_div;
+      dispatch_table[ZYDIS_MNEMONIC_MOVQ] = &CPU::emulate_movq;
+      dispatch_table[ZYDIS_MNEMONIC_JNBE] = &CPU::emulate_jnbe;
+      dispatch_table[ZYDIS_MNEMONIC_RDRAND] = &CPU::emulate_rdrand;
+      dispatch_table[ZYDIS_MNEMONIC_PUNPCKLDQ] = &CPU::emulate_punpckldq;
+      dispatch_table[ZYDIS_MNEMONIC_PUNPCKLQDQ] = &CPU::emulate_punpcklqdq;
+      dispatch_table[ZYDIS_MNEMONIC_MOVDQA] = &CPU::emulate_movdqa;
+      dispatch_table[ZYDIS_MNEMONIC_VINSERTF128] = &CPU::emulate_vinsertf128;
+      dispatch_table[ZYDIS_MNEMONIC_VMOVDQU] = &CPU::emulate_vmovdqu;
+      dispatch_table[ZYDIS_MNEMONIC_VZEROUPPER] = &CPU::emulate_vzeroupper;
+      dispatch_table[ZYDIS_MNEMONIC_MOVUPS] = &CPU::emulate_movups;
+      dispatch_table[ZYDIS_MNEMONIC_MOVDQU] = &CPU::emulate_movdqu;
+      dispatch_table[ZYDIS_MNEMONIC_XORPS] = &CPU::emulate_xorps;
+      dispatch_table[ZYDIS_MNEMONIC_STOSW] = &CPU::emulate_stosw;
+      dispatch_table[ZYDIS_MNEMONIC_SBB] = &CPU::emulate_sbb;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVB] = &CPU::emulate_cmovb;
+      dispatch_table[ZYDIS_MNEMONIC_VMOVDQA] = &CPU::emulate_vmovdqa;
+      dispatch_table[ZYDIS_MNEMONIC_SETBE] = &CPU::emulate_setbe;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVNZ] = &CPU::emulate_cmovnz;
+      dispatch_table[ZYDIS_MNEMONIC_XADD] = &CPU::emulate_xadd;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVNBE] = &CPU::emulate_cmovnbe;
+      dispatch_table[ZYDIS_MNEMONIC_STOSQ] = &CPU::emulate_stosq;
+      dispatch_table[ZYDIS_MNEMONIC_CDQE] = &CPU::emulate_cdqe;
+      dispatch_table[ZYDIS_MNEMONIC_MOVSX] = &CPU::emulate_movsx;
+      dispatch_table[ZYDIS_MNEMONIC_RCR] = &CPU::emulate_rcr;
+      dispatch_table[ZYDIS_MNEMONIC_CLC] = &CPU::emulate_clc;
+      dispatch_table[ZYDIS_MNEMONIC_ADC] = &CPU::emulate_adc;
+      dispatch_table[ZYDIS_MNEMONIC_STC] = &CPU::emulate_stc;
+      dispatch_table[ZYDIS_MNEMONIC_STOSD] = &CPU::emulate_stosd;
+      dispatch_table[ZYDIS_MNEMONIC_STOSB] = &CPU::emulate_stosb;
+      dispatch_table[ZYDIS_MNEMONIC_MOVAPS] = &CPU::emulate_movaps;
+      dispatch_table[ZYDIS_MNEMONIC_JNLE] = &CPU::emulate_jnle;
+      dispatch_table[ZYDIS_MNEMONIC_JNL] = &CPU::emulate_jnl;
+      dispatch_table[ZYDIS_MNEMONIC_JS] = &CPU::emulate_js;
+      dispatch_table[ZYDIS_MNEMONIC_JNS] = &CPU::emulate_jns;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVS] = &CPU::emulate_cmovs;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVNL] = &CPU::emulate_cmovnl;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVBE] = &CPU::emulate_cmovbe;
+      dispatch_table[ZYDIS_MNEMONIC_SETB] = &CPU::emulate_setb;
+      dispatch_table[ZYDIS_MNEMONIC_SETNBE] = &CPU::emulate_setnbe;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVNB] = &CPU::emulate_cmovnb;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVL] = &CPU::emulate_cmovl;
+      dispatch_table[ZYDIS_MNEMONIC_MOVSD] = &CPU::emulate_movsd;
+      dispatch_table[ZYDIS_MNEMONIC_PSRLDQ] = &CPU::emulate_psrldq;
+      dispatch_table[ZYDIS_MNEMONIC_MOVD] = &CPU::emulate_movd;
+      dispatch_table[ZYDIS_MNEMONIC_RCL] = &CPU::emulate_rcl;
+      dispatch_table[ZYDIS_MNEMONIC_SHLD] = &CPU::emulate_shld;
+      dispatch_table[ZYDIS_MNEMONIC_SHRD] = &CPU::emulate_shrd;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVNS] = &CPU::emulate_cmovns;
+      dispatch_table[ZYDIS_MNEMONIC_MOVSB] = &CPU::emulate_movsb;
+      dispatch_table[ZYDIS_MNEMONIC_MOVLHPS] = &CPU::emulate_movlhps;
+      dispatch_table[ZYDIS_MNEMONIC_VMOVUPS] = &CPU::emulate_vmovups;
+      dispatch_table[ZYDIS_MNEMONIC_VMOVAPS] = &CPU::emulate_vmovaps;
+      dispatch_table[ZYDIS_MNEMONIC_SETNB] = &CPU::emulate_setnb;
+      dispatch_table[ZYDIS_MNEMONIC_SCASD] = &CPU::emulate_scasd;
+      dispatch_table[ZYDIS_MNEMONIC_BSR] = &CPU::emulate_bsr;
+      dispatch_table[ZYDIS_MNEMONIC_PUNPCKLBW] = &CPU::emulate_punpcklbw;
+      dispatch_table[ZYDIS_MNEMONIC_PUNPCKLWD] = &CPU::emulate_punpcklwd;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVO] = &CPU::emulate_cmovo;
+      dispatch_table[ZYDIS_MNEMONIC_BSWAP] = &CPU::emulate_bswap;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVP] = &CPU::emulate_cmovp;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVNP] = &CPU::emulate_cmovnp;
+      dispatch_table[ZYDIS_MNEMONIC_JNP] = &CPU::emulate_jnp;
+      dispatch_table[ZYDIS_MNEMONIC_SETNS] = &CPU::emulate_setns;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVNO] = &CPU::emulate_cmovno;
+      dispatch_table[ZYDIS_MNEMONIC_JP] = &CPU::emulate_jp;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVLE] = &CPU::emulate_cmovle;
+      dispatch_table[ZYDIS_MNEMONIC_PREFETCHW] = &CPU::emulate_prefetchw;
+      dispatch_table[ZYDIS_MNEMONIC_PREFETCH] = &CPU::emulate_prefetchw;
+      dispatch_table[ZYDIS_MNEMONIC_PREFETCHIT0] = &CPU::emulate_prefetchw;
+      dispatch_table[ZYDIS_MNEMONIC_PREFETCHIT1] = &CPU::emulate_prefetchw;
+      dispatch_table[ZYDIS_MNEMONIC_PREFETCHNTA] = &CPU::emulate_prefetchw;
+      dispatch_table[ZYDIS_MNEMONIC_PREFETCHT0] = &CPU::emulate_prefetchw;
+      dispatch_table[ZYDIS_MNEMONIC_PREFETCHT1] = &CPU::emulate_prefetchw;
+      dispatch_table[ZYDIS_MNEMONIC_PREFETCHT2] = &CPU::emulate_prefetchw;
+      dispatch_table[ZYDIS_MNEMONIC_PREFETCHWT1] = &CPU::emulate_prefetchw;
+      dispatch_table[ZYDIS_MNEMONIC_BTS] = &CPU::emulate_bts;
+      dispatch_table[ZYDIS_MNEMONIC_SETP] = &CPU::emulate_setp;
+      dispatch_table[ZYDIS_MNEMONIC_SETNLE] = &CPU::emulate_setnle;
+      dispatch_table[ZYDIS_MNEMONIC_JNO] = &CPU::emulate_jno;
+      dispatch_table[ZYDIS_MNEMONIC_SETL] = &CPU::emulate_setl;
+      dispatch_table[ZYDIS_MNEMONIC_JO] = &CPU::emulate_jo;
+      dispatch_table[ZYDIS_MNEMONIC_CMOVNLE] = &CPU::emulate_cmovnle;
+      dispatch_table[ZYDIS_MNEMONIC_SETNP] = &CPU::emulate_setnp;
+      dispatch_table[ZYDIS_MNEMONIC_SETNL] = &CPU::emulate_setnl;
+      dispatch_table[ZYDIS_MNEMONIC_SETS] = &CPU::emulate_sets;
+      dispatch_table[ZYDIS_MNEMONIC_SETNO] = &CPU::emulate_setno;
+      dispatch_table[ZYDIS_MNEMONIC_SETLE] = &CPU::emulate_setle;
+      dispatch_table[ZYDIS_MNEMONIC_SETO] = &CPU::emulate_seto;
+      dispatch_table[ZYDIS_MNEMONIC_MOVSS] = &CPU::emulate_movss;
+      dispatch_table[ZYDIS_MNEMONIC_MOVSQ] = &CPU::emulate_movsq;
+      dispatch_table[ZYDIS_MNEMONIC_RDTSC] = &CPU::emulate_rdtsc;
+      dispatch_table[ZYDIS_MNEMONIC_MULSS] = &CPU::emulate_mulss;
+      dispatch_table[ZYDIS_MNEMONIC_COMISS] = &CPU::emulate_comiss;
+      dispatch_table[ZYDIS_MNEMONIC_CVTTSS2SI] = &CPU::emulate_cvttss2si;
+      dispatch_table[ZYDIS_MNEMONIC_CVTSI2SS] = &CPU::emulate_cvtsi2ss;
+      dispatch_table[ZYDIS_MNEMONIC_CVTSS2SI] = &CPU::emulate_cvtss2si;
+      dispatch_table[ZYDIS_MNEMONIC_TZCNT] = &CPU::emulate_tzcnt;
+      dispatch_table[ZYDIS_MNEMONIC_RCPSS] = &CPU::emulate_rcpss;
+      dispatch_table[ZYDIS_MNEMONIC_DIVSS] = &CPU::emulate_divss;
+      dispatch_table[ZYDIS_MNEMONIC_CVTSS2SD] = &CPU::emulate_cvtss2sd;
+      dispatch_table[ZYDIS_MNEMONIC_ANDPS] = &CPU::emulate_andps;
+      dispatch_table[ZYDIS_MNEMONIC_CVTDQ2PS] = &CPU::emulate_cvtdq2ps;
+      dispatch_table[ZYDIS_MNEMONIC_ADDSS] = &CPU::emulate_addss;
+      dispatch_table[ZYDIS_MNEMONIC_CDQ] = &CPU::emulate_cdq;
+      dispatch_table[ZYDIS_MNEMONIC_CQO] = &CPU::emulate_cqo;
+      dispatch_table[ZYDIS_MNEMONIC_CVTSI2SD] = &CPU::emulate_cvtsi2sd;
+      dispatch_table[ZYDIS_MNEMONIC_DIVSD] = &CPU::emulate_divsd;
+      dispatch_table[ZYDIS_MNEMONIC_MULSD] = &CPU::emulate_mulsd;
+      dispatch_table[ZYDIS_MNEMONIC_SUBSS] = &CPU::emulate_subss;
+      dispatch_table[ZYDIS_MNEMONIC_ADDSD] = &CPU::emulate_addsd;
+      dispatch_table[ZYDIS_MNEMONIC_SUBSD] = &CPU::emulate_subsd;
+      dispatch_table[ZYDIS_MNEMONIC_SQRTPD] = &CPU::emulate_sqrtpd;
+      dispatch_table[ZYDIS_MNEMONIC_IDIV] = &CPU::emulate_idiv;
+      dispatch_table[ZYDIS_MNEMONIC_LFENCE] = &CPU::emulate_lfence;
+      dispatch_table[ZYDIS_MNEMONIC_MFENCE] = &CPU::emulate_mfence;
+      dispatch_table[ZYDIS_MNEMONIC_VPXOR] = &CPU::emulate_vpxor;
+      dispatch_table[ZYDIS_MNEMONIC_VPCMPEQW] = &CPU::emulate_vpcmpeqw;
+      dispatch_table[ZYDIS_MNEMONIC_VPMOVMSKB] = &CPU::emulate_vpmovmskb;
+      dispatch_table[ZYDIS_MNEMONIC_PCMPISTRI] = &CPU::emulate_pcmpistri;
+      dispatch_table[ZYDIS_MNEMONIC_BSF] = &CPU::emulate_bsf;
+      dispatch_table[ZYDIS_MNEMONIC_CMPXCHG16B] = &CPU::emulate_cmpxchg16b;
+      dispatch_table[ZYDIS_MNEMONIC_UNPCKHPD] = &CPU::emulate_unpckhpd;
+      dispatch_table[ZYDIS_MNEMONIC_BTC] = &CPU::emulate_btc;
+      dispatch_table[ZYDIS_MNEMONIC_VPCMPEQB] = &CPU::emulate_vpcmpeqb;
+      dispatch_table[ZYDIS_MNEMONIC_PSHUFLW] = &CPU::emulate_pshuflw;
+      dispatch_table[ZYDIS_MNEMONIC_PSHUFHW] = &CPU::emulate_pshufhw;
+      dispatch_table[ZYDIS_MNEMONIC_PCMPEQB] = &CPU::emulate_pcmpeqb;
+      dispatch_table[ZYDIS_MNEMONIC_PCMPEQW] = &CPU::emulate_pcmpeqw;
+      dispatch_table[ZYDIS_MNEMONIC_PCMPEQD] = &CPU::emulate_pcmpeqd;
+      dispatch_table[ZYDIS_MNEMONIC_PSHUFD] = &CPU::emulate_pshufd;
+      dispatch_table[ZYDIS_MNEMONIC_POR] = &CPU::emulate_por;
+      dispatch_table[ZYDIS_MNEMONIC_PMOVMSKB] = &CPU::emulate_pmovmskb;
+      dispatch_table[ZYDIS_MNEMONIC_PAUSE] = &CPU::emulate_pause;
+      dispatch_table[ZYDIS_MNEMONIC_SHUFPS] = &CPU::emulate_shufps;
+      dispatch_table[ZYDIS_MNEMONIC_UNPCKLPS] = &CPU::emulate_unpcklps;
+      dispatch_table[ZYDIS_MNEMONIC_SQRTSS] = &CPU::emulate_sqrtss;
+      dispatch_table[ZYDIS_MNEMONIC_RSQRTPS] = &CPU::emulate_rsqrtps;
+      dispatch_table[ZYDIS_MNEMONIC_DIVPS] = &CPU::emulate_divps;
+      dispatch_table[ZYDIS_MNEMONIC_CVTPS2PD] = &CPU::emulate_cvtps2pd;
+      dispatch_table[ZYDIS_MNEMONIC_CVTPD2PS] = &CPU::emulate_cvtpd2ps;
+      dispatch_table[ZYDIS_MNEMONIC_PCMPEQW] = &CPU::emulate_pcmpeqw;
+      dispatch_table[ZYDIS_MNEMONIC_VMOVNTDQ] = &CPU::emulate_vmovntdq;
+      dispatch_table[ZYDIS_MNEMONIC_SFENCE] = &CPU::emulate_sfence;
+      dispatch_table[ZYDIS_MNEMONIC_MOVHPD] = &CPU::emulate_movhpd;
+      dispatch_table[ZYDIS_MNEMONIC_PADDQ] = &CPU::emulate_paddq;
+      dispatch_table[ZYDIS_MNEMONIC_CVTTSD2SI] = &CPU::emulate_cvttsd2si;
+      dispatch_table[ZYDIS_MNEMONIC_STMXCSR] = &CPU::emulate_stmxcsr;
+      dispatch_table[ZYDIS_MNEMONIC_FNSTCW] = &CPU::emulate_fnstcw;
+      dispatch_table[ZYDIS_MNEMONIC_UCOMISS] = &CPU::emulate_ucomiss;
+      dispatch_table[ZYDIS_MNEMONIC_ROUNDSS] = &CPU::emulate_roundss;
+      dispatch_table[ZYDIS_MNEMONIC_LEAVE] = &CPU::emulate_leave;
+      dispatch_table[ZYDIS_MNEMONIC_PUSHF] = &CPU::emulate_pushf;
+      dispatch_table[ZYDIS_MNEMONIC_PUSHFD] = &CPU::emulate_pushfd;
+      dispatch_table[ZYDIS_MNEMONIC_VMOVD] = &CPU::emulate_vmovd;
+      dispatch_table[ZYDIS_MNEMONIC_ORPS] = &CPU::emulate_orps;
+      dispatch_table[ZYDIS_MNEMONIC_SCASB] = &CPU::emulate_scasb;
+      dispatch_table[ZYDIS_MNEMONIC_CMC] = &CPU::emulate_cmc;
+      dispatch_table[ZYDIS_MNEMONIC_LAHF] = &CPU::emulate_lahf;
+      dispatch_table[ZYDIS_MNEMONIC_CBW] = &CPU::emulate_cbw;
+      dispatch_table[ZYDIS_MNEMONIC_CWDE] = &CPU::emulate_cwde;
+      dispatch_table[ZYDIS_MNEMONIC_LODSB] = &CPU::emulate_lodsb;
+      dispatch_table[ZYDIS_MNEMONIC_LODSW] = &CPU::emulate_lodsw;
+      dispatch_table[ZYDIS_MNEMONIC_LODSD] = &CPU::emulate_lodsd;
+      dispatch_table[ZYDIS_MNEMONIC_LODSQ] = &CPU::emulate_lodsq;
+      dispatch_table[ZYDIS_MNEMONIC_VPSHUFB] = &CPU::emulate_vpshufb;
+      dispatch_table[ZYDIS_MNEMONIC_LZCNT] = &CPU::emulate_lzcnt;
+      dispatch_table[ZYDIS_MNEMONIC_VPMASKMOVD] = &CPU::emulate_vpmaskmovd;
+      dispatch_table[ZYDIS_MNEMONIC_PAND] = &CPU::emulate_pand;
+      dispatch_table[ZYDIS_MNEMONIC_PANDN] = &CPU::emulate_pandn;
+      dispatch_table[ZYDIS_MNEMONIC_VPAND] = &CPU::emulate_vpand;
+      dispatch_table[ZYDIS_MNEMONIC_PSHUFB] = &CPU::emulate_pshufb;
+      dispatch_table[ZYDIS_MNEMONIC_FXSAVE] = &CPU::emulate_fxsave;
+      dispatch_table[ZYDIS_MNEMONIC_FXRSTOR] = &CPU::emulate_fxrstor;
+      dispatch_table[ZYDIS_MNEMONIC_SGDT] = &CPU::emulate_sgdt;
+      dispatch_table[ZYDIS_MNEMONIC_SAHF] = &CPU::emulate_sahf;
+      dispatch_table[ZYDIS_MNEMONIC_XLAT] = &CPU::emulate_xlatb;
+      dispatch_table[ZYDIS_MNEMONIC_VPADDQ] = &CPU::emulate_vpaddq;
+      dispatch_table[ZYDIS_MNEMONIC_VPSUBQ] = &CPU::emulate_vpsubq;
+      dispatch_table[ZYDIS_MNEMONIC_VPOR] = &CPU::emulate_vpor;
+      dispatch_table[ZYDIS_MNEMONIC_VPMULUDQ] = &CPU::emulate_vpmuludq;
+      dispatch_table[ZYDIS_MNEMONIC_VPCMPEQQ] = &CPU::emulate_vpcmpeqq;
+      dispatch_table[ZYDIS_MNEMONIC_PSLLW] = &CPU::emulate_psllw;
+      dispatch_table[ZYDIS_MNEMONIC_PSLLD] = &CPU::emulate_pslld;
+      dispatch_table[ZYDIS_MNEMONIC_PSLLQ] = &CPU::emulate_psllq;
+      dispatch_table[ZYDIS_MNEMONIC_VPSLLQ] = &CPU::emulate_vpsllq;
+      dispatch_table[ZYDIS_MNEMONIC_VPANDN] = &CPU::emulate_vpandn;
+      dispatch_table[ZYDIS_MNEMONIC_VPSLLVQ] = &CPU::emulate_vpsllvq;
+      dispatch_table[ZYDIS_MNEMONIC_VPCMPGTQ] = &CPU::emulate_vpcmpgtq;
+      dispatch_table[ZYDIS_MNEMONIC_VPBLENDVB] = &CPU::emulate_vpblendvb;
+      dispatch_table[ZYDIS_MNEMONIC_VPERMQ] = &CPU::emulate_vpermq;
+      dispatch_table[ZYDIS_MNEMONIC_VPSHUFD] = &CPU::emulate_vpshufd;
+      dispatch_table[ZYDIS_MNEMONIC_VPUNPCKLQDQ] = &CPU::emulate_vpunpcklqdq;
+      dispatch_table[ZYDIS_MNEMONIC_VPUNPCKHQDQ] = &CPU::emulate_vpunpckhqdq;
+      dispatch_table[ZYDIS_MNEMONIC_PACKUSWB] = &CPU::emulate_packuswb;
+      dispatch_table[ZYDIS_MNEMONIC_VPACKUSWB] = &CPU::emulate_vpackuswb;
+      dispatch_table[ZYDIS_MNEMONIC_PACKUSDW] = &CPU::emulate_packusdw;
+      dispatch_table[ZYDIS_MNEMONIC_VPACKUSDW] = &CPU::emulate_vpackusdw;
+      dispatch_table[ZYDIS_MNEMONIC_VPMADDWD] = &CPU::emulate_vpmaddwd;
+      dispatch_table[ZYDIS_MNEMONIC_VPSADBW] = &CPU::emulate_vpsadbw;
+      dispatch_table[ZYDIS_MNEMONIC_VPALIGNR] = &CPU::emulate_vpalignr;
+      dispatch_table[ZYDIS_MNEMONIC_VPGATHERDD] = &CPU::emulate_vpgatherdd;
+      dispatch_table[ZYDIS_MNEMONIC_VCVTDQ2PS] = &CPU::emulate_vcvtdq2ps;
+      dispatch_table[ZYDIS_MNEMONIC_VMULPS] = &CPU::emulate_vmulps;
+      dispatch_table[ZYDIS_MNEMONIC_VADDPS] = &CPU::emulate_vaddps;
+      dispatch_table[ZYDIS_MNEMONIC_VCVTPS2DQ] = &CPU::emulate_vcvtps2dq;
+      dispatch_table[ZYDIS_MNEMONIC_VHADDPS] = &CPU::emulate_vhaddps;
+      dispatch_table[ZYDIS_MNEMONIC_VPERMD] = &CPU::emulate_vpermd;
+      dispatch_table[ZYDIS_MNEMONIC_VPMULLW] = &CPU::emulate_vpmullw;
+      dispatch_table[ZYDIS_MNEMONIC_VPMULHW] = &CPU::emulate_vpmulhw;
+      dispatch_table[ZYDIS_MNEMONIC_VPTEST] = &CPU::emulate_vptest;
+      dispatch_table[ZYDIS_MNEMONIC_VPMOVSXWD] = &CPU::emulate_vpmovsxwd;
+      dispatch_table[ZYDIS_MNEMONIC_VPADDD] = &CPU::emulate_vpaddd;
+      dispatch_table[ZYDIS_MNEMONIC_PADDD] = &CPU::emulate_paddd;
+      dispatch_table[ZYDIS_MNEMONIC_PADDW] = &CPU::emulate_paddw;
+      dispatch_table[ZYDIS_MNEMONIC_PADDB] = &CPU::emulate_paddb;
+      dispatch_table[ZYDIS_MNEMONIC_PMOVZXDQ] = &CPU::emulate_pmovzxdq;
+      dispatch_table[ZYDIS_MNEMONIC_PSUBB] = &CPU::emulate_psubb;
+      dispatch_table[ZYDIS_MNEMONIC_PSUBW] = &CPU::emulate_psubw;
+      dispatch_table[ZYDIS_MNEMONIC_PSUBD] = &CPU::emulate_psubd;
+      dispatch_table[ZYDIS_MNEMONIC_PSUBQ] = &CPU::emulate_psubq;
+      dispatch_table[ZYDIS_MNEMONIC_VPMOVZXBW] = &CPU::emulate_vpmovzxbw;
+      dispatch_table[ZYDIS_MNEMONIC_PMOVZXWD] = &CPU::emulate_pmovzxwd;
+      dispatch_table[ZYDIS_MNEMONIC_VBLENDPS] = &CPU::emulate_vblendps;
+      dispatch_table[ZYDIS_MNEMONIC_VFMADD213PS] = &CPU::emulate_vfmadd213ps;
+      dispatch_table[ZYDIS_MNEMONIC_PXOR] = &CPU::emulate_pxor;
+      dispatch_table[ZYDIS_MNEMONIC_PMOVSXBW] = &CPU::emulate_pmovsxbw;
+      dispatch_table[ZYDIS_MNEMONIC_PMOVSXBD] = &CPU::emulate_pmovsxbd;
+      dispatch_table[ZYDIS_MNEMONIC_PMOVSXBQ] = &CPU::emulate_pmovsxbq;
+      dispatch_table[ZYDIS_MNEMONIC_PMOVSXWD] = &CPU::emulate_pmovsxwd;
+      dispatch_table[ZYDIS_MNEMONIC_PMOVSXWQ] = &CPU::emulate_pmovsxwq;
+      dispatch_table[ZYDIS_MNEMONIC_PMOVSXDQ] = &CPU::emulate_pmovsxdq;
+      dispatch_table[ZYDIS_MNEMONIC_KMOVB] = &CPU::emulate_kmovb;
+      dispatch_table[ZYDIS_MNEMONIC_KMOVW] = &CPU::emulate_kmovw;
+      dispatch_table[ZYDIS_MNEMONIC_KMOVD] = &CPU::emulate_kmovd;
+      dispatch_table[ZYDIS_MNEMONIC_KMOVQ] = &CPU::emulate_kmovq;
+      dispatch_table[ZYDIS_MNEMONIC_ROUNDPS] = &CPU::emulate_roundps;
+      dispatch_table[ZYDIS_MNEMONIC_VROUNDPS] = &CPU::emulate_vroundps;
+      dispatch_table[ZYDIS_MNEMONIC_VPERMILPS] = &CPU::emulate_vpermilps;
+      dispatch_table[ZYDIS_MNEMONIC_VMOVAPD] = &CPU::emulate_vmovapd;
+      dispatch_table[ZYDIS_MNEMONIC_VMOVUPD] = &CPU::emulate_vmovupd;
+      dispatch_table[ZYDIS_MNEMONIC_VEXTRACTF128] = &CPU::emulate_vextractf128;
+      dispatch_table[ZYDIS_MNEMONIC_VBROADCASTSS] = &CPU::emulate_vbroadcastss;
+      dispatch_table[ZYDIS_MNEMONIC_VBROADCASTSD] = &CPU::emulate_vbroadcastsd;
+      dispatch_table[ZYDIS_MNEMONIC_VBROADCASTF128] = &CPU::emulate_vbroadcastf128;
+      dispatch_table[ZYDIS_MNEMONIC_PMINUB] = &CPU::emulate_pminub;
+      dispatch_table[ZYDIS_MNEMONIC_PMINUW] = &CPU::emulate_pminuw;
+      dispatch_table[ZYDIS_MNEMONIC_VPMINUB] = &CPU::emulate_vpminub;
+      dispatch_table[ZYDIS_MNEMONIC_VPMINUW] = &CPU::emulate_vpminuw;
+      dispatch_table[ZYDIS_MNEMONIC_VPADDW] = &CPU::emulate_vpaddw;
+      dispatch_table[ZYDIS_MNEMONIC_VTESTPS] = &CPU::emulate_vtestps;
+      dispatch_table[ZYDIS_MNEMONIC_VTESTPD] = &CPU::emulate_vtestpd;
+      dispatch_table[ZYDIS_MNEMONIC_VPERMILPD] = &CPU::emulate_vpermilpd;
+      dispatch_table[ZYDIS_MNEMONIC_VPERM2F128] = &CPU::emulate_vperm2f128;
+      dispatch_table[ZYDIS_MNEMONIC_VPERM2I128] = &CPU::emulate_vperm2i128;
+      dispatch_table[ZYDIS_MNEMONIC_VINSERTI128] = &CPU::emulate_vinserti128;
+      dispatch_table[ZYDIS_MNEMONIC_VEXTRACTI128] = &CPU::emulate_vextracti128;
+      dispatch_table[ZYDIS_MNEMONIC_CLD] = &CPU::emulate_cld;
+      dispatch_table[ZYDIS_MNEMONIC_CVTSD2SS] = &CPU::emulate_cvtsd2ss;
+      dispatch_table[ZYDIS_MNEMONIC_COMISD] = &CPU::emulate_comisd;
+      dispatch_table[ZYDIS_MNEMONIC_SYSCALL] = &CPU::emulate_syscall;
+      dispatch_table[ZYDIS_MNEMONIC_LSL] = &CPU::emulate_lsl;
+      dispatch_table[ZYDIS_MNEMONIC_MULPS] = &CPU::emulate_mulps;
+      dispatch_table[ZYDIS_MNEMONIC_VSUBPS] = &CPU::emulate_vsubps;
+      dispatch_table[ZYDIS_MNEMONIC_SUBPS] = &CPU::emulate_subps;
+      dispatch_table[ZYDIS_MNEMONIC_ANDNPS] = &CPU::emulate_andnps;
+      dispatch_table[ZYDIS_MNEMONIC_VANDNPS] = &CPU::emulate_vandnps;
+      dispatch_table[ZYDIS_MNEMONIC_ADDPS] = &CPU::emulate_addps;
+      dispatch_table[ZYDIS_MNEMONIC_MOVHLPS] = &CPU::emulate_movhlps;
+      dispatch_table[ZYDIS_MNEMONIC_UNPCKLPD] = &CPU::emulate_unpcklpd;
+      dispatch_table[ZYDIS_MNEMONIC_VUNPCKLPD] = &CPU::emulate_vunpcklpd;
+      dispatch_table[ZYDIS_MNEMONIC_PMAXUB] = &CPU::emulate_pmaxub;
+      dispatch_table[ZYDIS_MNEMONIC_VPMAXUB] = &CPU::emulate_vpmaxub;
+      dispatch_table[ZYDIS_MNEMONIC_PMAXSB] = &CPU::emulate_pmaxsb;
+      dispatch_table[ZYDIS_MNEMONIC_PMAXSW] = &CPU::emulate_pmaxsw;
+      dispatch_table[ZYDIS_MNEMONIC_PMAXSD] = &CPU::emulate_pmaxsd;
+      dispatch_table[ZYDIS_MNEMONIC_VPMAXSB] = &CPU::emulate_vpmaxsb;
+      dispatch_table[ZYDIS_MNEMONIC_VPMAXSW] = &CPU::emulate_vpmaxsw;
+      dispatch_table[ZYDIS_MNEMONIC_VPMAXSD] = &CPU::emulate_vpmaxsd;
+      dispatch_table[ZYDIS_MNEMONIC_PMAXUD] = &CPU::emulate_pmaxud;
+      dispatch_table[ZYDIS_MNEMONIC_VPMAXUD] = &CPU::emulate_vpmaxud;
+      dispatch_table[ZYDIS_MNEMONIC_PMADDUBSW] = &CPU::emulate_pmaddubsw;
+      dispatch_table[ZYDIS_MNEMONIC_VPMADDUBSW] = &CPU::emulate_vpmaddubsw;
+      dispatch_table[ZYDIS_MNEMONIC_PMULHRSW] = &CPU::emulate_pmulhrsw;
+      dispatch_table[ZYDIS_MNEMONIC_VPMULHRSW] = &CPU::emulate_vpmulhrsw;
+      dispatch_table[ZYDIS_MNEMONIC_PSIGNB] = &CPU::emulate_psignb;
+      dispatch_table[ZYDIS_MNEMONIC_PSIGNW] = &CPU::emulate_psignw;
+      dispatch_table[ZYDIS_MNEMONIC_PSIGND] = &CPU::emulate_psignd;
+      dispatch_table[ZYDIS_MNEMONIC_VPSIGNB] = &CPU::emulate_vpsignb;
+      dispatch_table[ZYDIS_MNEMONIC_VPSIGNW] = &CPU::emulate_vpsignw;
+      dispatch_table[ZYDIS_MNEMONIC_VPSIGND] = &CPU::emulate_vpsignd;
+      dispatch_table[ZYDIS_MNEMONIC_VPBLENDD] = &CPU::emulate_vpblendd;
+      dispatch_table[ZYDIS_MNEMONIC_PMINSB] = &CPU::emulate_pminsb;
+      dispatch_table[ZYDIS_MNEMONIC_VPMINSB] = &CPU::emulate_vpminsb;
+      dispatch_table[ZYDIS_MNEMONIC_PMINSD] = &CPU::emulate_pminsd;
+      dispatch_table[ZYDIS_MNEMONIC_VPMINSD] = &CPU::emulate_vpminsd;
+      dispatch_table[ZYDIS_MNEMONIC_PMAXUW] = &CPU::emulate_pmaxuw;
+      dispatch_table[ZYDIS_MNEMONIC_VPMAXUW] = &CPU::emulate_vpmaxuw;
+      dispatch_table[ZYDIS_MNEMONIC_PMINSW] = &CPU::emulate_pminsw;
+      dispatch_table[ZYDIS_MNEMONIC_VPMINSW] = &CPU::emulate_vpminsw;
+      dispatch_table[ZYDIS_MNEMONIC_PMINUD] = &CPU::emulate_pminud;
+      dispatch_table[ZYDIS_MNEMONIC_VPMINUD] = &CPU::emulate_vpminud;
+      dispatch_table[ZYDIS_MNEMONIC_PHADDW] = &CPU::emulate_phaddw;
+      dispatch_table[ZYDIS_MNEMONIC_VPHADDW] = &CPU::emulate_vphaddw;
+      dispatch_table[ZYDIS_MNEMONIC_PHADDD] = &CPU::emulate_phaddd;
+      dispatch_table[ZYDIS_MNEMONIC_VPHADDD] = &CPU::emulate_vphaddd;
+      dispatch_table[ZYDIS_MNEMONIC_PHADDSW] = &CPU::emulate_phaddsw;
+      dispatch_table[ZYDIS_MNEMONIC_VPHADDSW] = &CPU::emulate_vphaddsw;
+      dispatch_table[ZYDIS_MNEMONIC_PHSUBW] = &CPU::emulate_phsubw;
+      dispatch_table[ZYDIS_MNEMONIC_VPHSUBW] = &CPU::emulate_vphsubw;
+      dispatch_table[ZYDIS_MNEMONIC_PHSUBD] = &CPU::emulate_phsubd;
+      dispatch_table[ZYDIS_MNEMONIC_VPHSUBD] = &CPU::emulate_vphsubd;
+      dispatch_table[ZYDIS_MNEMONIC_VPGATHERDQ] = &CPU::emulate_vpgatherdq;
+      dispatch_table[ZYDIS_MNEMONIC_VPGATHERQQ] = &CPU::emulate_vpgatherqq;
+      dispatch_table[ZYDIS_MNEMONIC_VGATHERDPD] = &CPU::emulate_vgatherdpd;
+      dispatch_table[ZYDIS_MNEMONIC_VGATHERQPD] = &CPU::emulate_vgatherqpd;
+      dispatch_table[ZYDIS_MNEMONIC_VGATHERDPS] = &CPU::emulate_vgatherdps;
+      dispatch_table[ZYDIS_MNEMONIC_VGATHERQPS] = &CPU::emulate_vgatherqps;
+      dispatch_table[ZYDIS_MNEMONIC_PEXTRQ] = &CPU::emulate_pextrq;
+      dispatch_table[ZYDIS_MNEMONIC_VPEXTRQ] = &CPU::emulate_vpextrq;
+      dispatch_table[ZYDIS_MNEMONIC_VPBROADCASTB] = &CPU::emulate_vpbroadcastb;
+      dispatch_table[ZYDIS_MNEMONIC_VPBROADCASTW] = &CPU::emulate_vpbroadcastw;
+      dispatch_table[ZYDIS_MNEMONIC_VPBROADCASTD] = &CPU::emulate_vpbroadcastd;
+      dispatch_table[ZYDIS_MNEMONIC_VPBROADCASTQ] = &CPU::emulate_vpbroadcastq;
+      dispatch_table[ZYDIS_MNEMONIC_PSRLD] = &CPU::emulate_psrld;
+      dispatch_table[ZYDIS_MNEMONIC_PSRLQ] = &CPU::emulate_psrlq;
+      dispatch_table[ZYDIS_MNEMONIC_VPSRLW] = &CPU::emulate_vpsrlw;
+      dispatch_table[ZYDIS_MNEMONIC_VPSRLD] = &CPU::emulate_vpsrld;
+      dispatch_table[ZYDIS_MNEMONIC_VPSRLQ] = &CPU::emulate_vpsrlq;
+      dispatch_table[ZYDIS_MNEMONIC_BLENDVPD] = &CPU::emulate_blendvpd;
+      dispatch_table[ZYDIS_MNEMONIC_VBLENDVPD] = &CPU::emulate_vblendvpd;
+      dispatch_table[ZYDIS_MNEMONIC_BLENDPS] = &CPU::emulate_blendps;
+      dispatch_table[ZYDIS_MNEMONIC_SHUFPD] = &CPU::emulate_shufpd;
+      dispatch_table[ZYDIS_MNEMONIC_VSHUFPD] = &CPU::emulate_vshufpd;
+      dispatch_table[ZYDIS_MNEMONIC_UNPCKHPS] = &CPU::emulate_unpckhps;
+      dispatch_table[ZYDIS_MNEMONIC_VUNPCKHPS] = &CPU::emulate_vunpckhps;
+      dispatch_table[ZYDIS_MNEMONIC_VUNPCKHPD] = &CPU::emulate_vunpckhpd;
+      dispatch_table[ZYDIS_MNEMONIC_VUNPCKLPS] = &CPU::emulate_vunpcklps;
+      dispatch_table[ZYDIS_MNEMONIC_VFMADD213PD] = &CPU::emulate_vfmadd213pd;
+      dispatch_table[ZYDIS_MNEMONIC_ROUNDSD] = &CPU::emulate_roundsd;
+      dispatch_table[ZYDIS_MNEMONIC_VRSQRTPS] = &CPU::emulate_vrsqrtps;
+      dispatch_table[ZYDIS_MNEMONIC_SQRTPS] = &CPU::emulate_sqrtps;
+      dispatch_table[ZYDIS_MNEMONIC_VSQRTPS] = &CPU::emulate_vsqrtps;
+      dispatch_table[ZYDIS_MNEMONIC_SQRTSD] = &CPU::emulate_sqrtsd;
+      dispatch_table[ZYDIS_MNEMONIC_VFMSUB213PS] = &CPU::emulate_vfmsub213ps;
+      dispatch_table[ZYDIS_MNEMONIC_VFNMSUB213PD] = &CPU::emulate_vfnmsub213pd;
+      dispatch_table[ZYDIS_MNEMONIC_VFMSUB213PD] = &CPU::emulate_vfmsub213pd;
+      dispatch_table[ZYDIS_MNEMONIC_CWD] = &CPU::emulate_cwd;
 
-    };
   }
 
   // ------------------- Public Methods -------------------
@@ -1093,13 +1091,12 @@ public:
           return g_regs.rip + instr.length;
         }
 
-        auto it = dispatch_table.find(instr.mnemonic);
-        if (it != dispatch_table.end()) {
+        if (dispatch_table[instr.mnemonic] != nullptr){
           if (has_rep || has_repne) {
             g_regs.rflags.flags.NT = 1;
 
             for (uint64_t count = g_regs.rcx.q; count > 0; count--) {
-              (this->*it->second)(op);
+              (this->*dispatch_table[instr.mnemonic])(op);
               g_regs.rcx.q--;
 
               if ((has_repne && g_regs.rflags.flags.ZF) || g_regs.rcx.q == 0) {
@@ -1114,7 +1111,7 @@ public:
           }
 
           else {
-            (this->*it->second)(op);
+            (this->*dispatch_table[instr.mnemonic])(op);
 
             if (!disasm.IsJump() && instr.mnemonic != ZYDIS_MNEMONIC_CALL &&
                 instr.mnemonic != ZYDIS_MNEMONIC_RET) {
@@ -1659,9 +1656,8 @@ private:
   std::string instrText;
   bool has_lock;
   uint64_t address;
-  std::unordered_map<ZydisMnemonic,
-                     void (CPU::*)(const ZydisDisassembledInstruction *)>
-      dispatch_table;
+  using funcptr = void (CPU::*)(const ZydisDisassembledInstruction*);
+  funcptr dispatch_table[ZYDIS_MNEMONIC_MAX_VALUE + 1]{};
   std::unordered_map<ZydisRegister, void *> reg_lookup;
 #if AUTO_PATCH_HW
   int patchDistance = 0;
